@@ -17,7 +17,7 @@ export default function FrameStage({ code, language, title }) {
 
   return (
     <div ref={ref} className="h-full w-full overflow-hidden bg-paper p-2.5">
-      {inView ? (
+      {inView && doc ? (
         <iframe
           title={title}
           srcDoc={doc}

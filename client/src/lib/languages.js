@@ -6,6 +6,7 @@ export const LANGUAGES = {
   html: {
     id: 'html',
     label: 'HTML',
+    code: 'HTML',
     color: 'var(--lang-html)',
     hljs: 'xml',
     runner: 'iframe',
@@ -14,6 +15,7 @@ export const LANGUAGES = {
   js: {
     id: 'js',
     label: 'JavaScript',
+    code: 'JS',
     color: 'var(--lang-js)',
     hljs: 'javascript',
     runner: 'iframe',
@@ -22,6 +24,7 @@ export const LANGUAGES = {
   python: {
     id: 'python',
     label: 'Python',
+    code: 'PY',
     color: 'var(--lang-python)',
     hljs: 'python',
     runner: 'pyodide',
@@ -30,6 +33,7 @@ export const LANGUAGES = {
   c: {
     id: 'c',
     label: 'C',
+    code: 'C',
     color: 'var(--lang-c)',
     hljs: 'c',
     runner: 'cached',
@@ -38,6 +42,7 @@ export const LANGUAGES = {
   cpp: {
     id: 'cpp',
     label: 'C++',
+    code: 'CPP',
     color: 'var(--lang-cpp)',
     hljs: 'cpp',
     runner: 'cached',
@@ -46,6 +51,7 @@ export const LANGUAGES = {
   other: {
     id: 'other',
     label: '其他',
+    code: 'N/A',
     color: 'var(--app-faint)',
     hljs: 'plaintext',
     runner: 'cached',

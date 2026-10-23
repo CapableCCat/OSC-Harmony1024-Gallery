@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
+import DistributionBar from './components/DistributionBar';
 import WorkCard from './components/WorkCard';
 import { SkeletonGrid, StateMessage } from './components/StatusScreen';
 import { useWorks } from './hooks/useWorks';
@@ -24,6 +25,13 @@ export default function App() {
     }
     const t = setTimeout(start, 4000);
     return () => clearTimeout(t);
+  }, [works]);
+
+  /* 编号跟随作品本体，不随筛选变动 */
+  const orderOf = useMemo(() => {
+    const map = new Map();
+    works.forEach((w, i) => map.set(w.id, i + 1));
+    return map;
   }, [works]);
 
   const counts = useMemo(() => {
@@ -50,6 +58,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-40 h-px bg-gradient-to-r from-transparent via-accent/45 to-transparent" />
       <Header total={works.length} languageCount={languageCount} />
 
       <FilterBar
@@ -59,6 +68,8 @@ export default function App() {
         onQueryChange={setQuery}
         counts={counts}
       />
+
+      <DistributionBar counts={counts} total={works.length} />
 
       <main className="mx-auto max-w-[1280px] px-5 pb-20 pt-5 sm:px-8">
         {loading && <SkeletonGrid count={6} />}
@@ -87,7 +98,7 @@ export default function App() {
         {shown.length > 0 && (
           <div className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(340px,1fr))]">
             {shown.map((work) => (
-              <WorkCard key={work.id} work={work} />
+              <WorkCard key={work.id} work={work} order={orderOf.get(work.id) || 0} />
             ))}
           </div>
         )}

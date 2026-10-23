@@ -14,9 +14,17 @@ export default function Header({ total, languageCount }) {
         </div>
 
         <div className="ml-auto flex items-center gap-4">
-          <span className="hidden text-[11px] tabular-nums text-muted sm:inline">
-            {total} 件作品 · {languageCount} 种语言
-          </span>
+          <div className="hidden items-center gap-4 mono text-[10.5px] tracking-[.14em] text-faint sm:flex">
+            <span className="flex items-center gap-1.5">
+              <i className="size-1 rounded-full bg-accent" />
+              SYS ONLINE
+            </span>
+            <span className="h-3 w-px bg-line" />
+            <span className="tabular-nums">
+              {String(total).padStart(3, '0')} WORKS
+            </span>
+            <span className="tabular-nums">{String(languageCount).padStart(2, '0')} LANGS</span>
+          </div>
         </div>
       </div>
     </header>

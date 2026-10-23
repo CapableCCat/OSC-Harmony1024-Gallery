@@ -158,6 +158,41 @@ body {
   animation: caret 1.1s steps(1) infinite;
 }
 
+/* 悬停时的单次扫描光带：只在被 hover 的那一张上跑一次，不循环 */
+@keyframes scan {
+  0% {
+    transform: translateY(-130%);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(340%);
+    opacity: 0;
+  }
+}
+
+.scan-line {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 28%;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-130%);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(63, 208, 168, 0.12),
+    transparent
+  );
+}
+
+.group:hover .scan-line {
+  animation: scan 1.25s ease-out;
+}
+
 /* ============================================================
    highlight.js —— 跟随主题变量
    ============================================================ */

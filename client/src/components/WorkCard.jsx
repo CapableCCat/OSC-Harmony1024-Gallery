@@ -28,7 +28,7 @@ async function copyText(text) {
   }
 }
 
-function WorkCard({ work }) {
+function WorkCard({ work, order = 0 }) {
   const meta = langMeta(work.language);
   const isFrame = work.runner === 'iframe';
   const { status, result, run } = useRunner(work);
@@ -61,6 +61,9 @@ function WorkCard({ work }) {
       {/* 标题区：两行，语言与奖项贴右，不额外占行 */}
       <div className="px-4 pb-3 pt-3.5">
         <div className="flex items-baseline gap-2">
+          <span className="mono shrink-0 text-[10px] tabular-nums leading-6 text-accent/60">
+            {String(order).padStart(2, '0')}
+          </span>
           <h3 className="min-w-0 flex-1 truncate text-[14.5px] font-medium leading-6">
             {work.author}
           </h3>
@@ -79,6 +82,11 @@ function WorkCard({ work }) {
 
       {/* 预览区：通栏、无内层边框（靠底色区分，不再套一层框） */}
       <div className="relative min-h-[240px] flex-1 border-t border-line bg-surface-2">
+        <span className="scan-line" />
+        <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 size-2 border-l border-t border-accent/30" />
+        <span className="pointer-events-none absolute right-1.5 top-1.5 z-10 size-2 border-r border-t border-accent/30" />
+        <span className="pointer-events-none absolute bottom-1.5 left-1.5 z-10 size-2 border-b border-l border-accent/30" />
+        <span className="pointer-events-none absolute bottom-1.5 right-1.5 z-10 size-2 border-b border-r border-accent/30" />
         {isFrame ? (
           <FrameStage code={work.code} language={work.language} title={`${work.author} 的作品`} />
         ) : view === 'code' ? (
@@ -140,7 +148,7 @@ function WorkCard({ work }) {
               type="button"
               onClick={run}
               disabled={busy}
-              className="shrink-0 whitespace-nowrap rounded-md bg-accent px-2.5 py-1 text-[11px] font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+              className="shrink-0 whitespace-nowrap rounded-[5px] bg-accent px-2.5 py-1 text-[11px] font-medium text-accent-ink shadow-[0_0_14px_-4px_var(--app-accent)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
             >
               {runLabel}
             </button>
