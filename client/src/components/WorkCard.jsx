@@ -28,7 +28,7 @@ async function copyText(text) {
   }
 }
 
-function WorkCard({ work, order = 0 }) {
+function WorkCard({ work, order = 0, intro = false }) {
   const meta = langMeta(work.language);
   const isFrame = work.runner === 'iframe';
   const { status, result, run } = useRunner(work);
@@ -55,7 +55,8 @@ function WorkCard({ work, order = 0 }) {
   return (
     <article
       onPointerEnter={work.runner === 'pyodide' ? warmupPython : undefined}
-      className="group relative flex h-full flex-col overflow-hidden rounded-[10px] border border-line bg-surface transition-colors hover:border-line-hover">
+      style={intro ? { animationDelay: `${Math.min(order, 12) * 22}ms` } : undefined}
+      className={`group relative flex h-full flex-col overflow-hidden rounded-[10px] border border-line bg-surface transition-colors hover:border-line-hover ${intro ? 'card-in' : ''}`}>
       {/* hover 时才出现的一像素强调线，作为克制的「通电」反馈 */}
       <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-accent/25 transition-colors duration-300 group-hover:bg-accent/70" />
       {/* 标题区：两行，语言与奖项贴右，不额外占行 */}

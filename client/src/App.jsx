@@ -11,7 +11,14 @@ export default function App() {
   const { works, generatedAt, loading, error } = useWorks();
   const [lang, setLang] = useState('all');
   const [query, setQuery] = useState('');
+  /* 入场动画只在首次加载播放；筛选/搜索产生的新卡片不再重播 */
+  const [intro, setIntro] = useState(true);
   const deferredQuery = useDeferredValue(query);
+
+  useEffect(() => {
+    const t = setTimeout(() => setIntro(false), 1100);
+    return () => clearTimeout(t);
+  }, []);
 
   /* 预热：数据一到就开拉运行时，用户浏览卡片的时间足够下完 12MB */
   useEffect(() => {
@@ -98,7 +105,7 @@ export default function App() {
         {shown.length > 0 && (
           <div className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(340px,1fr))]">
             {shown.map((work) => (
-              <WorkCard key={work.id} work={work} order={orderOf.get(work.id) || 0} />
+              <WorkCard key={work.id} work={work} order={orderOf.get(work.id) || 0} intro={intro} />
             ))}
           </div>
         )}
