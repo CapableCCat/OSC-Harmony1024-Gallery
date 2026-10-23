@@ -1,0 +1,17 @@
+{
+  "name": "osc-harmony1024-gallery",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "天津中德开源鸿蒙社 · 1024 程序员节代码画廊",
+  "workspaces": [
+    "client"
+  ],
+  "scripts": {
+    "data": "node scripts/generate-data.js",
+    "dev": "npm run data && npm run dev -w client",
+    "build": "npm run data && node scripts/vendor-pyodide.mjs && npm run build -w client",
+    "preview": "npm run preview -w client",
+    "vendor:pyodide": "node scripts/vendor-pyodide.mjs"
+  }
+}
