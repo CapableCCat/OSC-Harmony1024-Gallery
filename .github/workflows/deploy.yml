@@ -3,10 +3,15 @@ name: Build & Deploy
 # 触发方式：
 #   - push 到 main：自动构建部署
 #   - 手动：Actions 页面点 "Run workflow"（活动截止后评委改完数据，一键重发）
+#   - 定时：活动期间每 30 分钟同步一次作品仓库
+#     （作品在 AtomGit 合并不会触发本仓库的 CI，所以需要定时兜底；
+#       GitHub 会在仓库 60 天无活动后自动停用定时任务，届时手动 Run workflow 即可）
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'
 
 # 同一时间只跑一条，避免两次部署互相覆盖
 concurrency:
@@ -22,6 +27,11 @@ env:
   WORKS_REPO_URL: https://atomgit.com/tsgu-osc-org/1024.git
   # Cloudflare Pages 项目名；也可以在仓库 Variables 里覆盖
   PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'osc-harmony1024-gallery' }}
+  # 正式站是否展示 mock 示例卡：活动开始前想先挂示例，就在仓库 Variables 里把 SHOW_MOCK 设为 true
+  SHOW_MOCK: ${{ vars.SHOW_MOCK || 'false' }}
+  # 作品仓库为空（活动开始前）时是否照常部署「作品正在路上」空状态页；
+  # 提取逻辑稳定后可把这一行改成 'false'，恢复空数据熔断
+  ALLOW_EMPTY: 'true'
 
 jobs:
   build-deploy:
@@ -52,14 +62,15 @@ jobs:
         run: npm ci
 
       # ubuntu-latest 自带 gcc/g++，C/C++ 在这一步完成编译与预执行
+      # 是否合并 mock 由环境变量 SHOW_MOCK 决定（脚本自己读），仓库 Variables 可覆盖
       - name: 提取作品数据
-        run: node scripts/generate-data.js --repo ./works-repo --no-mock
+        run: node scripts/generate-data.js --repo ./works-repo
 
-      - name: 校验数据非空
+      - name: 校验数据
         run: |
           COUNT=$(node -e "console.log(require('./client/public/data/works.json').count)")
-          echo "提取到作品：$COUNT 件"
-          if [ "$COUNT" -eq 0 ]; then
+          echo "作品数：$COUNT（ALLOW_EMPTY=$ALLOW_EMPTY）"
+          if [ "$COUNT" -eq 0 ] && [ "$ALLOW_EMPTY" != "true" ]; then
             echo "::error::没有提取到任何作品，终止部署，避免把空页面发布出去"
             exit 1
           fi

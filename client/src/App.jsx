@@ -3,7 +3,7 @@ import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import DistributionBar from './components/DistributionBar';
 import WorkCard from './components/WorkCard';
-import { SkeletonGrid, StateMessage } from './components/StatusScreen';
+import { EmptyGallery, SkeletonGrid, StateMessage } from './components/StatusScreen';
 import { useWorks } from './hooks/useWorks';
 import { warmupPython } from './lib/runners/python';
 
@@ -88,12 +88,7 @@ export default function App() {
           />
         )}
 
-        {!loading && !error && works.length === 0 && (
-          <StateMessage
-            title="还没有作品"
-            desc="数据文件是空的。跑一次 npm run data，或在 data/mock-works.mjs 里打开几条 mock。"
-          />
-        )}
+        {!loading && !error && works.length === 0 && <EmptyGallery />}
 
         {!loading && !error && works.length > 0 && shown.length === 0 && (
           <StateMessage
