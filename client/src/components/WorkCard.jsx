@@ -49,10 +49,12 @@ export default function WorkCard({ work }) {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  const runLabel = busy ? '运行中' : result ? '重新运行' : '运行';
+  const runLabel = busy ? '运行中' : result ? '重跑' : '运行';
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-line-hover">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-[10px] border border-line bg-surface transition-colors hover:border-line-hover">
+      {/* hover 时才出现的一像素强调线，作为克制的「通电」反馈 */}
+      <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-accent/25 transition-colors duration-300 group-hover:bg-accent/70" />
       {/* 标题区：两行，语言与奖项贴右，不额外占行 */}
       <div className="px-4 pb-3 pt-3.5">
         <div className="flex items-baseline gap-2">
@@ -98,7 +100,7 @@ export default function WorkCard({ work }) {
       </div>
 
       {/* 唯一操作栏 */}
-      <div className="flex h-11 items-center gap-4 border-t border-line px-4 text-[11.5px]">
+      <div className="flex h-11 items-center gap-4 border-t border-line px-4 mono text-[11px]">
         {result ? (
           <button
             type="button"
@@ -111,13 +113,13 @@ export default function WorkCard({ work }) {
           <span className="truncate text-faint">{meta.hint}</span>
         )}
 
-        <div className="ml-auto flex items-center gap-3.5">
+        <div className="ml-auto flex items-center gap-5">
           {work.repo_url && (
             <a
               href={work.repo_url}
               target="_blank"
               rel="noreferrer noopener"
-              className="text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
+              className="shrink-0 underline-offset-4 transition-colors hover:text-ink hover:underline"
             >
               源码
             </a>
@@ -135,7 +137,7 @@ export default function WorkCard({ work }) {
               type="button"
               onClick={run}
               disabled={busy}
-              className="rounded-md bg-accent px-2.5 py-1 text-[11.5px] font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+              className="shrink-0 whitespace-nowrap rounded-md bg-accent px-2.5 py-1 text-[11px] font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {runLabel}
             </button>

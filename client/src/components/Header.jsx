@@ -1,11 +1,9 @@
-import ThemeToggle from './ThemeToggle';
-
 export default function Header({ total, languageCount }) {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-bg/92 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-3 px-5 sm:px-8">
         <span className="mono flex size-8 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-[11px] text-ink">
-          {'</>'}
+          {'</>'}<span className="caret ml-1 inline-block h-[9px] w-[5px] bg-accent align-baseline" />
         </span>
 
         <div className="min-w-0">
@@ -19,7 +17,6 @@ export default function Header({ total, languageCount }) {
           <span className="hidden text-[11px] tabular-nums text-muted sm:inline">
             {total} 件作品 · {languageCount} 种语言
           </span>
-          <ThemeToggle />
         </div>
       </div>
     </header>

@@ -3,16 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f7f6f3" />
+    <meta name="theme-color" content="#101114" />
     <title>1024 代码画廊 · 天津中德开源鸿蒙社</title>
-    <script>
-      // 首帧之前应用主题，避免深色用户看到白屏闪烁（默认白天）
-      try {
-        if (localStorage.getItem('gallery-theme') === 'dark') {
-          document.documentElement.dataset.theme = 'dark';
-        }
-      } catch (e) {}
-    </script>
   </head>
   <body>
     <div id="root"></div>

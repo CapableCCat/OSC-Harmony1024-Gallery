@@ -23,9 +23,9 @@ export default function FilterBar({ active, onChange, query, onQueryChange, coun
               }`}
             >
               {tab.label}
-              <span className="ml-1 text-[11px] tabular-nums text-faint">{tab.count}</span>
+              <span className="mono ml-1 text-[10.5px] tabular-nums text-faint">{tab.count}</span>
               {isActive && (
-                <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-ink" />
+                <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-accent" />
               )}
             </button>
           );
