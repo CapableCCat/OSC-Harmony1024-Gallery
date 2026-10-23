@@ -90,7 +90,22 @@ async function loadMock() {
 
 function writeOut(works) {
   fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
-  const payload = { generatedAt: new Date().toISOString(), count: works.length, works };
+
+  // 数据没变就不刷新 generatedAt，避免每次构建都弄脏工作树
+  let generatedAt = new Date().toISOString();
+  if (fs.existsSync(OUT_FILE)) {
+    try {
+      const prev = JSON.parse(fs.readFileSync(OUT_FILE, 'utf8'));
+      if (prev?.generatedAt && JSON.stringify(prev.works) === JSON.stringify(works)) {
+        generatedAt = prev.generatedAt;
+        console.log('[data] 数据无变化，保留原生成时间');
+      }
+    } catch {
+      /* 旧文件损坏则直接覆盖 */
+    }
+  }
+
+  const payload = { generatedAt, count: works.length, works };
   fs.writeFileSync(OUT_FILE, JSON.stringify(payload, null, 2) + '\n', 'utf8');
 
   const byLang = works.reduce((acc, w) => {
