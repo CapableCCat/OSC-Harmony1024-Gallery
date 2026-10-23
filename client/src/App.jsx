@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import WorkCard from './components/WorkCard';
@@ -10,11 +10,20 @@ export default function App() {
   const { works, generatedAt, loading, error } = useWorks();
   const [lang, setLang] = useState('all');
   const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
 
   /* 预热：数据一到就开拉运行时，用户浏览卡片的时间足够下完 12MB */
   useEffect(() => {
     if (!works.some((w) => w.runner === 'pyodide')) return;
-    warmupPython();
+
+    // 首屏渲染完再下 12MB 运行时，避免和首屏抢主线程/带宽
+    const start = () => warmupPython();
+    if (window.requestIdleCallback) {
+      const i = window.requestIdleCallback(start, { timeout: 6000 });
+      return () => window.cancelIdleCallback?.(i);
+    }
+    const t = setTimeout(start, 4000);
+    return () => clearTimeout(t);
   }, [works]);
 
   const counts = useMemo(() => {
@@ -24,7 +33,7 @@ export default function App() {
   }, [works]);
 
   const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = deferredQuery.trim().toLowerCase();
     return works.filter((w) => {
       if (lang !== 'all' && w.language !== lang) return false;
       if (!q) return true;
@@ -32,7 +41,7 @@ export default function App() {
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(q));
     });
-  }, [works, lang, query]);
+  }, [works, lang, deferredQuery]);
 
   const languageCount = useMemo(
     () => new Set(works.map((w) => w.language)).size,

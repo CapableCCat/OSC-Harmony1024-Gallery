@@ -25,7 +25,7 @@ function escapeHtml(str) {
 
 export default function CodePane({ code, language, className = '' }) {
   const meta = langMeta(language);
-  const [ref, inView] = useInView({ rootMargin: '300px 0px' });
+  const [ref, inView] = useInView({ rootMargin: '250px 0px' });
 
   const html = useMemo(() => {
     if (!inView) return '';

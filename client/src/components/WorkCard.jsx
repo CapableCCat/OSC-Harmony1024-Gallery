@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import LanguageBadge from './LanguageBadge';
 import CodePane from './CodePane';
 import OutputPane from './OutputPane';
 import FrameStage from './FrameStage';
 import { useRunner } from '../hooks/useRunner';
+import { warmupPython } from '../lib/runners/python';
 import { langMeta } from '../lib/languages';
 
 async function copyText(text) {
@@ -27,7 +28,7 @@ async function copyText(text) {
   }
 }
 
-export default function WorkCard({ work }) {
+function WorkCard({ work }) {
   const meta = langMeta(work.language);
   const isFrame = work.runner === 'iframe';
   const { status, result, run } = useRunner(work);
@@ -52,7 +53,9 @@ export default function WorkCard({ work }) {
   const runLabel = busy ? '运行中' : result ? '重跑' : '运行';
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-[10px] border border-line bg-surface transition-colors hover:border-line-hover">
+    <article
+      onPointerEnter={work.runner === 'pyodide' ? warmupPython : undefined}
+      className="group relative flex h-full flex-col overflow-hidden rounded-[10px] border border-line bg-surface transition-colors hover:border-line-hover">
       {/* hover 时才出现的一像素强调线，作为克制的「通电」反馈 */}
       <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-accent/25 transition-colors duration-300 group-hover:bg-accent/70" />
       {/* 标题区：两行，语言与奖项贴右，不额外占行 */}
@@ -173,3 +176,5 @@ function CodeView({ code, language, expanded, onExpand }) {
     </div>
   );
 }
+
+export default memo(WorkCard);

@@ -12,8 +12,8 @@ import { buildSrcdoc } from '../lib/srcdoc';
  * 安全：sandbox 仅 allow-scripts + srcdoc 注入 CSP（禁 fetch/XHR/form）。
  */
 export default function FrameStage({ code, language, title }) {
-  const [ref, inView] = useInView({ rootMargin: '500px 0px' });
-  const doc = useMemo(() => buildSrcdoc(code, language), [code, language]);
+  const [ref, inView] = useInView({ rootMargin: '250px 0px' });
+  const doc = useMemo(() => (inView ? buildSrcdoc(code, language) : ''), [inView, code, language]);
 
   return (
     <div ref={ref} className="h-full w-full overflow-hidden bg-paper p-2.5">
