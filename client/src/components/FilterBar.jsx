@@ -9,8 +9,8 @@ export default function FilterBar({ active, onChange, query, onQueryChange, coun
   ];
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-wrap items-end gap-x-4 gap-y-3 px-5 pt-6 sm:px-6">
-      <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
+    <div className="mx-auto flex max-w-[1280px] flex-wrap items-end gap-x-4 gap-y-3 px-5 pt-7 sm:px-8">
+      <nav className="flex flex-wrap items-center gap-x-6 gap-y-1">
         {tabs.map((tab) => {
           const isActive = active === tab.id;
           return (
@@ -18,7 +18,7 @@ export default function FilterBar({ active, onChange, query, onQueryChange, coun
               key={tab.id}
               type="button"
               onClick={() => onChange(tab.id)}
-              className={`relative pb-1.5 text-[12.5px] transition-colors ${
+              className={`relative pb-1.5 text-[13px] transition-colors ${
                 isActive ? 'text-ink' : 'text-muted hover:text-ink'
               }`}
             >

@@ -33,13 +33,13 @@
 :root {
   --app-bg: #f7f6f3;
   --app-surface: #ffffff;
-  --app-surface-2: #f0efeb;
-  --app-line: #e3e1da;
+  --app-surface-2: #f2f1ed;
+  --app-line: #e5e3dd;
   --app-line-soft: #edece7;
-  --app-line-hover: #cbc8be;
+  --app-line-hover: #c9c6bc;
   --app-ink: #1b1c1e;
-  --app-muted: #63646a;
-  --app-faint: #97989d;
+  --app-muted: #4d4f56;
+  --app-faint: #82848a;
   --app-accent: #0f6f5c;
   --app-accent-ink: #ffffff;
   --app-accent-soft: #e6f2ef;
@@ -71,8 +71,8 @@
   --app-line-soft: #26272d;
   --app-line-hover: #414249;
   --app-ink: #e9e9ea;
-  --app-muted: #a2a3a9;
-  --app-faint: #6f7077;
+  --app-muted: #adaeb4;
+  --app-faint: #7d7f86;
   --app-accent: #4fbfa6;
   --app-accent-ink: #08211c;
   --app-accent-soft: #16302b;
@@ -117,8 +117,8 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -126,7 +126,7 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--app-line-hover);
   border-radius: 9999px;
-  border: 3px solid var(--app-bg);
+  border: none;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--app-faint);

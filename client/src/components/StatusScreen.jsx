@@ -1,10 +1,10 @@
 export function SkeletonGrid({ count = 6 }) {
   return (
-    <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(340px,1fr))]">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="h-[300px] animate-pulse rounded-xl border border-line bg-surface"
+          className="h-[384px] animate-pulse rounded-xl border border-line bg-surface"
           style={{ animationDelay: `${i * 80}ms` }}
         />
       ))}

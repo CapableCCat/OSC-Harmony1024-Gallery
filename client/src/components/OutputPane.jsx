@@ -21,17 +21,17 @@ export default function OutputPane({ result, status }) {
   return (
     <div className="h-full overflow-auto">
       {status === 'timeout' && (
-        <div className="flex items-center gap-1.5 border-b border-line-soft bg-warn/10 px-3 py-1.5 text-[10.5px] text-warn">
+        <div className="flex items-center gap-1.5 border-b border-line-soft bg-warn/10 px-3 py-1.5 text-[11px] text-warn">
           执行超时，已强制终止
         </div>
       )}
 
       {empty ? (
-        <div className="grid h-full place-items-center text-[11px] text-faint">
+        <div className="grid h-full place-items-center text-[11.5px] text-faint">
           {status === 'done' ? '程序没有输出' : '暂无输出'}
         </div>
       ) : (
-        <div className="px-3.5 py-3 pb-12 mono text-[11.5px] leading-[1.65] text-ink">
+        <div className="px-4 py-3.5 mono text-[12px] leading-[1.75] text-ink">
           {stdoutHtml && (
             <pre
               className="whitespace-pre-wrap break-words"

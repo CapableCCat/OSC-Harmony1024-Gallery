@@ -27,12 +27,13 @@ async function copyText(text) {
   }
 }
 
-export default function WorkCard({ work, order }) {
+export default function WorkCard({ work }) {
   const meta = langMeta(work.language);
   const isFrame = work.runner === 'iframe';
-  const { status, result, run, meta: statusMeta } = useRunner(work);
+  const { status, result, run } = useRunner(work);
 
   const [view, setView] = useState('code');
+  const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const busy = status === 'waking' || status === 'running';
@@ -48,96 +49,69 @@ export default function WorkCard({ work, order }) {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  return (
-    <article className="flex h-full flex-col rounded-xl border border-line bg-surface p-3.5 transition-colors hover:border-line-hover">
-      {/* 作者 / 文件名 / 语言 */}
-      <div className="flex items-start gap-2">
-        <span className="mono mt-[3px] w-4 shrink-0 text-[10px] tabular-nums text-faint">
-          {String(order).padStart(2, '0')}
-        </span>
+  const runLabel = busy ? '运行中' : result ? '重新运行' : '运行';
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-1.5">
-            <h3 className="truncate text-[13.5px] font-medium leading-5">{work.author}</h3>
-            {work.mock && (
-              <span className="shrink-0 rounded border border-line px-1 text-[9px] leading-[14px] text-faint">
-                示例
-              </span>
-            )}
-          </div>
-          <p className="mono truncate text-[11px] leading-4 text-faint">
-            {work.title || work.filename}
-          </p>
+  return (
+    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-line-hover">
+      {/* 标题区：两行，语言与奖项贴右，不额外占行 */}
+      <div className="px-4 pb-3 pt-3.5">
+        <div className="flex items-baseline gap-2">
+          <h3 className="min-w-0 flex-1 truncate text-[14.5px] font-medium leading-6">
+            {work.author}
+          </h3>
+          <LanguageBadge language={work.language} />
         </div>
 
-        <LanguageBadge language={work.language} />
+        <div className="mt-0.5 flex items-baseline gap-2">
+          <p className="mono min-w-0 flex-1 truncate text-[11.5px] leading-4 text-faint">
+            {work.title || work.filename}
+          </p>
+          {work.tag && (
+            <span className="shrink-0 truncate text-[11px] leading-4 text-muted">{work.tag}</span>
+          )}
+        </div>
       </div>
 
-      {/* 奖项位（无奖项也占位，保证同排对齐） */}
-      <div className="flex h-5 items-center pl-6">
-        {work.tag && <span className="truncate text-[10.5px] text-warn">{work.tag}</span>}
-      </div>
-
-      {/* 运行区 */}
-      <div className="relative mt-1 flex min-h-[190px] flex-1 flex-col overflow-hidden rounded-lg border border-line bg-surface-2">
+      {/* 预览区：通栏、无内层边框（靠底色区分，不再套一层框） */}
+      <div className="relative min-h-[240px] flex-1 border-t border-line bg-surface-2">
         {isFrame ? (
           <FrameStage code={work.code} language={work.language} title={`${work.author} 的作品`} />
+        ) : view === 'code' ? (
+          <CodeView code={work.code} language={work.language} expanded={expanded} onExpand={() => setExpanded(true)} />
         ) : (
-          <>
-            {result && (
-              <div className="flex h-7 shrink-0 items-center gap-1 border-b border-line-soft px-2">
-                <ViewTab active={view === 'code'} onClick={() => setView('code')}>
-                  代码
-                </ViewTab>
-                <ViewTab active={view === 'output'} onClick={() => setView('output')}>
-                  输出
-                </ViewTab>
-                <span className="ml-auto pr-1 text-[10px] text-faint">{meta.hint}</span>
-              </div>
+          <OutputPane result={result} status={status} />
+        )}
+
+        {busy && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2.5 bg-surface-2/95 px-6 text-center">
+            <span className="size-5 animate-spin rounded-full border-2 border-line border-t-accent" />
+            <p className="text-[12px] text-ink">
+              {status === 'waking' ? '正在准备 Python 运行环境…' : '正在运行…'}
+            </p>
+            {status === 'waking' && (
+              <p className="max-w-[16rem] text-[11px] leading-4 text-faint">
+                首次约需加载 12MB 运行时，之后就绪即用
+              </p>
             )}
-
-            <div className="relative min-h-0 flex-1">
-              {view === 'code' ? (
-                <CodePane code={work.code} language={work.language} />
-              ) : (
-                <OutputPane result={result} status={status} />
-              )}
-
-              <button
-                type="button"
-                onClick={run}
-                disabled={busy}
-                className="absolute bottom-2 right-2 rounded-md bg-accent px-2.5 py-1 text-[11px] font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {busy ? '运行中' : result ? '重新运行' : '运行'}
-              </button>
-            </div>
-
-            {busy && (
-              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2.5 bg-surface-2/95 px-6 text-center">
-                <span className="size-5 animate-spin rounded-full border-2 border-line border-t-accent" />
-                <p className="text-[11px] text-ink">
-                  {status === 'waking' ? '正在准备 Python 运行环境…' : '正在运行…'}
-                </p>
-                {status === 'waking' && (
-                  <p className="max-w-[15rem] text-[10px] leading-4 text-faint">
-                    首次约需加载 12MB 运行时，之后就绪即用
-                  </p>
-                )}
-              </div>
-            )}
-          </>
+          </div>
         )}
       </div>
 
-      {/* 状态 / 源码 / 复制 */}
-      <div className="mt-2.5 flex items-center gap-2 text-[11px]">
-        <span className={`inline-flex items-center gap-1.5 ${statusMeta.tone}`}>
-          <i className={`size-1.5 rounded-full ${statusMeta.dot}`} />
-          {statusMeta.text}
-        </span>
+      {/* 唯一操作栏 */}
+      <div className="flex h-11 items-center gap-4 border-t border-line px-4 text-[11.5px]">
+        {result ? (
+          <button
+            type="button"
+            onClick={() => setView(view === 'code' ? 'output' : 'code')}
+            className="text-muted transition-colors hover:text-ink"
+          >
+            {view === 'code' ? '查看输出' : '查看代码'}
+          </button>
+        ) : (
+          <span className="truncate text-faint">{meta.hint}</span>
+        )}
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-3.5">
           {work.repo_url && (
             <a
               href={work.repo_url}
@@ -155,22 +129,45 @@ export default function WorkCard({ work, order }) {
           >
             {copied ? '已复制' : '复制'}
           </button>
+
+          {!isFrame && (
+            <button
+              type="button"
+              onClick={run}
+              disabled={busy}
+              className="rounded-md bg-accent px-2.5 py-1 text-[11.5px] font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {runLabel}
+            </button>
+          )}
         </div>
       </div>
     </article>
   );
 }
 
-function ViewTab({ active, onClick, children }) {
+/** 代码超过 8 行时默认只露前 8 行，底部渐隐 + 一个展开按钮 */
+function CodeView({ code, language, expanded, onExpand }) {
+  const isLong = String(code || '').split('\n').length > 8;
+  const collapsed = isLong && !expanded;
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded px-1.5 py-0.5 text-[10.5px] transition-colors ${
-        active ? 'bg-surface text-ink' : 'text-muted hover:text-ink'
-      }`}
-    >
-      {children}
-    </button>
+    <div className="relative h-full">
+      <div className={collapsed ? 'h-full max-h-[150px] overflow-hidden' : 'h-full'}>
+        <CodePane code={code} language={language} />
+      </div>
+
+      {collapsed && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-surface-2 via-surface-2/85 to-transparent pb-2 pt-8">
+          <button
+            type="button"
+            onClick={onExpand}
+            className="pointer-events-auto rounded-full border border-line bg-surface px-2.5 py-0.5 text-[11px] text-muted transition-colors hover:text-ink"
+          >
+            展开全部
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

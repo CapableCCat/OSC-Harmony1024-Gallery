@@ -13,7 +13,7 @@ export default function FrameStage({ code, language, title }) {
   const doc = useMemo(() => buildSrcdoc(code, language), [code, language]);
 
   return (
-    <div ref={ref} className="relative h-full w-full overflow-hidden bg-white">
+    <div ref={ref} className="relative h-full w-full overflow-hidden p-3">
       {inView ? (
         <iframe
           title={title}
@@ -21,7 +21,7 @@ export default function FrameStage({ code, language, title }) {
           sandbox="allow-scripts"
           referrerPolicy="no-referrer"
           loading="lazy"
-          className="h-full w-full border-0 bg-white"
+          className="h-full w-full rounded-md bg-white"
         />
       ) : (
         <div className="grid h-full place-items-center bg-surface-2">

@@ -40,7 +40,7 @@ export default function CodePane({ code, language, className = '' }) {
   return (
     <pre
       ref={ref}
-      className={`h-full overflow-auto px-3.5 py-3 pb-10 mono text-[11.5px] leading-[1.65] text-ink ${className}`}
+      className={`h-full overflow-auto px-4 py-3.5 mono text-[12px] leading-[1.75] text-ink ${className}`}
     >
       {html ? (
         <code dangerouslySetInnerHTML={{ __html: html }} />

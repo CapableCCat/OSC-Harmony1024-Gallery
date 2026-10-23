@@ -23,13 +23,6 @@ export default function App() {
     return acc;
   }, [works]);
 
-  /* 作品编号跟作品走，不跟筛选走（否则切语言后 #01 会变成另一件作品） */
-  const orderOf = useMemo(() => {
-    const map = new Map();
-    works.forEach((w, i) => map.set(w.id, i + 1));
-    return map;
-  }, [works]);
-
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return works.filter((w) => {
@@ -58,7 +51,7 @@ export default function App() {
         counts={counts}
       />
 
-      <main className="mx-auto max-w-[1200px] px-5 pb-16 pt-4 sm:px-6">
+      <main className="mx-auto max-w-[1280px] px-5 pb-20 pt-5 sm:px-8">
         {loading && <SkeletonGrid count={6} />}
 
         {!loading && error && (
@@ -83,9 +76,9 @@ export default function App() {
         )}
 
         {shown.length > 0 && (
-          <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">
+          <div className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(340px,1fr))]">
             {shown.map((work) => (
-              <WorkCard key={work.id} work={work} order={orderOf.get(work.id) || 0} />
+              <WorkCard key={work.id} work={work} />
             ))}
           </div>
         )}
