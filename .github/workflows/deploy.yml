@@ -1,0 +1,76 @@
+name: Build & Deploy
+
+# 触发方式：
+#   - push 到 main：自动构建部署
+#   - 手动：Actions 页面点 "Run workflow"（活动截止后评委改完数据，一键重发）
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 同一时间只跑一条，避免两次部署互相覆盖
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+
+env:
+  # 作品仓库地址（AtomGit，与展示仓库完全独立）
+  WORKS_REPO_URL: https://atomgit.com/tsgu-osc-org/1024.git
+  # Cloudflare Pages 项目名；也可以在仓库 Variables 里覆盖
+  PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'osc-harmony1024-gallery' }}
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 检出展示站仓库
+        uses: actions/checkout@v4
+
+      # 作品仓库在 AtomGit，不是 GitHub，
+      # 所以不能用 actions/checkout 的 repository 参数，必须直接 git clone。
+      - name: 拉取作品仓库
+        run: |
+          git clone --depth 1 "$WORKS_REPO_URL" works-repo
+          echo "--- 作品仓库文件数 ---"
+          find works-repo -type f -not -path '*/.git/*' | wc -l
+          echo "--- 顶层目录 ---"
+          ls -1 works-repo | head -30
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      # ubuntu-latest 自带 gcc/g++，C/C++ 在这一步完成编译与预执行
+      - name: 提取作品数据
+        run: node scripts/generate-data.js --repo ./works-repo --no-mock
+
+      - name: 校验数据非空
+        run: |
+          COUNT=$(node -e "console.log(require('./client/public/data/works.json').count)")
+          echo "提取到作品：$COUNT 件"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::没有提取到任何作品，终止部署，避免把空页面发布出去"
+            exit 1
+          fi
+
+      # 只跑 vendor + vite build，不再重复生成数据（否则会覆盖上一步的结果）
+      - name: 构建前端
+        run: npm run build:site
+
+      - name: 部署到 Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy client/dist --project-name=${{ env.PAGES_PROJECT }} --branch=main

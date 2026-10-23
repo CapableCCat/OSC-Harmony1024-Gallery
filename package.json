@@ -9,8 +9,11 @@
   ],
   "scripts": {
     "data": "node scripts/generate-data.js",
+    "data:repo": "node scripts/generate-data.js --repo",
+    "vendor": "node scripts/vendor-pyodide.mjs && node scripts/vendor-fonts.mjs",
+    "build:site": "npm run vendor && npm run build -w client",
+    "build": "npm run data && npm run build:site",
     "dev": "npm run data && npm run dev -w client",
-    "build": "npm run data && node scripts/vendor-pyodide.mjs && node scripts/vendor-fonts.mjs && npm run build -w client",
     "preview": "npm run preview -w client",
     "vendor:pyodide": "node scripts/vendor-pyodide.mjs",
     "vendor:fonts": "node scripts/vendor-fonts.mjs"

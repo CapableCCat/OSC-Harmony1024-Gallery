@@ -29,3 +29,6 @@ Thumbs.db
 
 # workbuddy
 .workbuddy/
+
+# CI 临时拉取的作品仓库
+works-repo/
