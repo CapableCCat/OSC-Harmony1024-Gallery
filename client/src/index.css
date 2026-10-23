@@ -1,0 +1,199 @@
+@import 'tailwindcss';
+
+/* ============================================================
+   设计令牌
+   ------------------------------------------------------------
+   语义色通过 CSS 变量间接引用，所以切换 data-theme 时
+   所有 Tailwind 工具类（bg-surface / text-muted / border-line）
+   会跟着变，不需要写两份 class。
+   ============================================================ */
+@theme {
+  --font-sans: system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas,
+    'Courier New', monospace;
+
+  --color-bg: var(--app-bg);
+  --color-surface: var(--app-surface);
+  --color-surface-2: var(--app-surface-2);
+  --color-line: var(--app-line);
+  --color-line-soft: var(--app-line-soft);
+  --color-line-hover: var(--app-line-hover);
+  --color-ink: var(--app-ink);
+  --color-muted: var(--app-muted);
+  --color-faint: var(--app-faint);
+  --color-accent: var(--app-accent);
+  --color-accent-ink: var(--app-accent-ink);
+  --color-accent-soft: var(--app-accent-soft);
+  --color-danger: var(--app-danger);
+  --color-warn: var(--app-warn);
+}
+
+/* 白天（默认）：暖白纸感，低对比线，单一墨绿强调色 */
+:root {
+  --app-bg: #f7f6f3;
+  --app-surface: #ffffff;
+  --app-surface-2: #f0efeb;
+  --app-line: #e3e1da;
+  --app-line-soft: #edece7;
+  --app-line-hover: #cbc8be;
+  --app-ink: #1b1c1e;
+  --app-muted: #63646a;
+  --app-faint: #97989d;
+  --app-accent: #0f6f5c;
+  --app-accent-ink: #ffffff;
+  --app-accent-soft: #e6f2ef;
+  --app-danger: #b42318;
+  --app-warn: #a16207;
+
+  --lang-html: #b45309;
+  --lang-js: #9a6700;
+  --lang-python: #1d4ed8;
+  --lang-c: #4b5563;
+  --lang-cpp: #6d28d9;
+
+  --code-ink: #24292f;
+  --code-comment: #6e7781;
+  --code-keyword: #cf222e;
+  --code-string: #0a3069;
+  --code-number: #0550ae;
+  --code-func: #8250df;
+  --code-attr: #116329;
+  --code-meta: #953800;
+}
+
+/* 黑夜：石墨底，强调色提亮以保证对比度 */
+[data-theme='dark'] {
+  --app-bg: #141519;
+  --app-surface: #1b1c21;
+  --app-surface-2: #212228;
+  --app-line: #2c2d34;
+  --app-line-soft: #26272d;
+  --app-line-hover: #414249;
+  --app-ink: #e9e9ea;
+  --app-muted: #a2a3a9;
+  --app-faint: #6f7077;
+  --app-accent: #4fbfa6;
+  --app-accent-ink: #08211c;
+  --app-accent-soft: #16302b;
+  --app-danger: #f28b82;
+  --app-warn: #e3b341;
+
+  --lang-html: #f0a868;
+  --lang-js: #e3b341;
+  --lang-python: #7aa7f7;
+  --lang-c: #9aa4b2;
+  --lang-cpp: #b39df5;
+
+  --code-ink: #d5d7db;
+  --code-comment: #7d8590;
+  --code-keyword: #ff7b72;
+  --code-string: #a5d6ff;
+  --code-number: #79c0ff;
+  --code-func: #d2a8ff;
+  --code-attr: #7ee787;
+  --code-meta: #ffa657;
+}
+
+html {
+  color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+  background-color: var(--app-bg);
+}
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--app-bg);
+  color: var(--app-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--app-accent-soft);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--app-line-hover);
+  border-radius: 9999px;
+  border: 3px solid var(--app-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--app-faint);
+}
+
+@utility mono {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ============================================================
+   highlight.js —— 只用 CSS 变量上色，跟随主题
+   ============================================================ */
+.hljs {
+  color: var(--code-ink);
+  background: transparent;
+}
+.hljs-comment,
+.hljs-quote {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-type,
+.hljs-doctag {
+  color: var(--code-keyword);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+  color: var(--code-string);
+}
+.hljs-number,
+.hljs-variable,
+.hljs-template-variable {
+  color: var(--code-number);
+}
+.hljs-title,
+.hljs-title.function_,
+.hljs-section,
+.hljs-name {
+  color: var(--code-func);
+}
+.hljs-built_in,
+.hljs-class .hljs-title,
+.hljs-title.class_ {
+  color: var(--code-number);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-selector-attr {
+  color: var(--code-attr);
+}
+.hljs-meta,
+.hljs-meta .hljs-keyword,
+.hljs-tag {
+  color: var(--code-meta);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 700;
+}
