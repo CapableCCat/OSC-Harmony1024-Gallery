@@ -98,7 +98,7 @@ export default function App() {
         )}
 
         {shown.length > 0 && (
-          <div className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(340px,1fr))]">
+          <div className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr))]">
             {shown.map((work) => (
               <WorkCard key={work.id} work={work} order={orderOf.get(work.id) || 0} intro={intro} />
             ))}

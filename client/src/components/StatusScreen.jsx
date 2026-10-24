@@ -1,6 +1,6 @@
 export function SkeletonGrid({ count = 6 }) {
   return (
-    <div className="grid grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(340px,1fr))]">
+    <div className="grid grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr))]">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
