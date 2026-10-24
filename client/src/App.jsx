@@ -105,13 +105,19 @@ export default function App() {
           </div>
         )}
 
-        <footer className="mt-10 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4 text-[11px] text-faint">
-          <span>
-            共 {works.length} 件作品 · 显示 {shown.length} 件
-          </span>
-          <span>
-            {generatedAt ? `数据生成于 ${new Date(generatedAt).toLocaleString('zh-CN')}` : '开发者模式'}
-          </span>
+        <footer className="mt-10 border-t border-line pt-4 text-[11px] text-faint">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>
+              共 {works.length} 件作品 · 显示 {shown.length} 件
+            </span>
+            <span>
+              {generatedAt ? `数据生成于 ${new Date(generatedAt).toLocaleString('zh-CN')}` : '开发者模式'}
+            </span>
+          </div>
+          <p className="mt-2">
+            © 2026 天津中德开源鸿蒙社 · 本站由社团维护者与 GLM、DeepSeek 协作构建 ·
+            祝所有程序员 1024 节日快乐
+          </p>
         </footer>
       </main>
     </div>
