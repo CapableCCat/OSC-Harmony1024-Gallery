@@ -5,14 +5,8 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    // 零后端（D-01）：没有 /api 代理，数据全部来自构建期生成的静态 works.json
     port: 5173,
-    proxy: {
-      // 开发期把 /api 交给 Express（避免跨域，生产由 Express 同端口托管）
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-    },
   },
   build: {
     outDir: 'dist',

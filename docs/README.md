@@ -47,11 +47,9 @@
 > 每次交接时由 AI 同步更新本节；只写一行 + 指针。
 
 **阶段**：功能与视觉定稿，CI 流水线就绪，文档四件套完成（D1~D4 ✅）+ 提交指南（D5 ✅）。
-**待办**：push 本地 commit → 配置 Cloudflare Secrets → 首次 Run workflow 验证
-Variable 开关链路 → 用真实 AtomGit 仓库验证提取脚本。
-**待办**：push 12 个本地 commit → 配置 Cloudflare Secrets → 首次 Run workflow 验证
-Variable 开关链路 → 用真实 AtomGit 仓库验证提取脚本。
-**明细**：以 `git log --oneline` 为准。
+**待办**：push 本地未推送的 commit → 配置 Cloudflare Secrets → 首次 Run workflow 验证
+Variable 开关链路 → 用更多真实提交验证提取脚本容错。
+**明细**：未推送数量以 `git log origin/main..HEAD --oneline` 为准，不在此写死条数。
 
 ---
 
