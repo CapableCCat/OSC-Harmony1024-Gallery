@@ -50,7 +50,19 @@ function WorkCard({ work, order = 0, intro = false }) {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  const runLabel = busy ? '运行中' : result ? '重跑' : '运行';
+  /* 主按钮：未运行时触发执行；运行过之后变成源码态/展示态切换 */
+  const onPrimary = () => {
+    if (result) setView((v) => (v === 'output' ? 'code' : 'output'));
+    else run();
+  };
+
+  const primaryLabel = busy
+    ? '运行中'
+    : result
+      ? view === 'output'
+        ? '查看源码'
+        : '查看输出'
+      : '运行';
 
   return (
     <article
@@ -111,19 +123,9 @@ function WorkCard({ work, order = 0, intro = false }) {
         )}
       </div>
 
-      {/* 唯一操作栏 */}
+      {/* 唯一操作栏：右侧主按钮承担「运行」与「源码态/展示态切换」两种职责 */}
       <div className="flex h-11 items-center gap-4 border-t border-line px-4 mono text-[11px]">
-        {result ? (
-          <button
-            type="button"
-            onClick={() => setView(view === 'code' ? 'output' : 'code')}
-            className="text-muted transition-colors hover:text-ink"
-          >
-            {view === 'code' ? '查看输出' : '查看代码'}
-          </button>
-        ) : (
-          <span className="truncate text-faint">{meta.hint}</span>
-        )}
+        <span className="truncate text-faint">{meta.hint}</span>
 
         <div className="ml-auto flex items-center gap-5">
           {work.repo_url && (
@@ -147,11 +149,11 @@ function WorkCard({ work, order = 0, intro = false }) {
           {!isFrame && (
             <button
               type="button"
-              onClick={run}
+              onClick={onPrimary}
               disabled={busy}
               className="shrink-0 whitespace-nowrap rounded-[5px] bg-accent px-2.5 py-1 text-[11px] font-medium text-accent-ink shadow-[0_0_14px_-4px_var(--app-accent)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
             >
-              {runLabel}
+              {primaryLabel}
             </button>
           )}
         </div>
