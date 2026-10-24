@@ -49,7 +49,7 @@ export default function FilterBar({ active, onChange, query, onQueryChange, coun
         <input
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="搜索作者、文件名或奖项"
+          placeholder="搜索作者、文件名或标题"
           className="h-8 w-full rounded-md border border-line bg-surface pl-8 pr-7 text-[12px] text-ink placeholder:text-faint transition-colors focus:border-line-hover focus:outline-none"
         />
         {query && (

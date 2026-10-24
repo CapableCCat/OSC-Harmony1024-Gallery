@@ -71,7 +71,7 @@ function WorkCard({ work, order = 0, intro = false }) {
       className={`group relative flex h-full flex-col overflow-hidden rounded-[10px] border border-line bg-surface transition-colors hover:border-line-hover ${intro ? 'card-in' : ''}`}>
       {/* hover 时才出现的一像素强调线，作为克制的「通电」反馈 */}
       <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-accent/25 transition-colors duration-300 group-hover:bg-accent/70" />
-      {/* 标题区：两行，语言与奖项贴右，不额外占行 */}
+      {/* 标题区：两行，语言与预留标签贴右，不额外占行 */}
       <div className="px-4 pb-3 pt-3.5">
         <div className="flex items-baseline gap-2">
           <span className="mono shrink-0 text-[10px] tabular-nums leading-6 text-accent/60">

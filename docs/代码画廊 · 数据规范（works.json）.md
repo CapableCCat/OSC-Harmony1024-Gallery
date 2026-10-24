@@ -49,7 +49,7 @@ AtomGit 作品仓库（CI 拉取）────┘        （--repo <dir>）    
 | `runner` | string | ✅ | 执行器，由 language 推导（见下），数据里显式写出 |
 | `code` | string | ✅ | 源码文本；**html 作品是内联后的单文件**，不是原始文件 |
 | `output` | object \| null | ✗ | 仅 `cached` 有值：C/C++ 预执行结果，见「五」 |
-| `tag` | string | ✅ | 奖项占位字段（D-06：无评奖，恒为空串，渲染分支保留） |
+| `tag` | string | ✅ | 预留扩展字段（D-06 决策：当前恒为空串，渲染分支保留，暂无用途） |
 | `repo_url` | string | ✅ | AtomGit 仓库内对应目录链接；mock 亦填 |
 | `mock` | boolean | ✅ | 是否示例数据；真实提取恒为 `false` |
 
