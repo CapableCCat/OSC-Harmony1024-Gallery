@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: 检出展示站仓库
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # 作品仓库在 AtomGit，不是 GitHub，
       # 所以不能用 actions/checkout 的 repository 参数，必须直接 git clone。
@@ -53,7 +53,7 @@ jobs:
           ls -1 works-repo | head -30
 
       - name: 安装 Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
