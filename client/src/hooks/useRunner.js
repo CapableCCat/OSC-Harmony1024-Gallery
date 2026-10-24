@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { runPython } from '../lib/runners/python';
+import { createLiveOutput } from '../lib/live-output';
 
 export const STATUS_META = {
   idle: { text: '待运行', dot: 'bg-faint', tone: 'text-muted' },
@@ -15,16 +16,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /**
  * 单张卡片的运行状态机。
  * 三种执行器共用同一套状态：idle → (waking) → running → done / error / timeout
+ *
+ * liveHtml：Python 动画型作品运行中的实时画面（每帧一次更新）。
+ * 它是"过程"，运行结束后由 result 的最终画面接管。
  */
 export function useRunner(work) {
   const [status, setStatus] = useState('idle');
   const [result, setResult] = useState(null);
+  const [liveHtml, setLiveHtml] = useState('');
   const busy = useRef(false);
+  const liveRef = useRef(null);
 
   const run = useCallback(async () => {
     if (!work || busy.current) return;
     busy.current = true;
     setResult(null);
+    setLiveHtml('');
 
     try {
       if (work.runner === 'cached') {
@@ -41,14 +48,32 @@ export function useRunner(work) {
           setStatus(out.timeout ? 'timeout' : out.ok ? 'done' : 'error');
         }
       } else {
-        const res = await runPython(work.code, {
-          timeoutMs: 5000,
-          onStatus: (s) => setStatus(s === 'waking' ? 'waking' : 'running'),
-        });
+        const live = createLiveOutput((html) => setLiveHtml(html));
+        liveRef.current = live;
+
+        let res;
+        try {
+          res = await runPython(work.code, {
+            timeoutMs: 5000,
+            onStatus: (s) => setStatus(s === 'waking' ? 'waking' : 'running'),
+            onChunk: (text) => {
+              if (liveRef.current === live) live.push(text);
+            },
+          });
+        } finally {
+          live.cancel(); // 收尾：别让挂起的尾帧盖掉最终结果
+          liveRef.current = null;
+        }
+
+        // 超时 / 报错时保留已经画出来的现场，比直接空白有用
+        if (!res.stdout && live.text) res = { ...res, stdout: live.text };
+
+        setLiveHtml('');
         setResult(res);
         setStatus(res.timeout ? 'timeout' : res.ok ? 'done' : 'error');
       }
     } catch (err) {
+      setLiveHtml('');
       setResult({ ok: false, stdout: '', stderr: String(err?.message || err) });
       setStatus('error');
     } finally {
@@ -57,9 +82,11 @@ export function useRunner(work) {
   }, [work]);
 
   const reset = useCallback(() => {
+    liveRef.current = null;
+    setLiveHtml('');
     setResult(null);
     setStatus('idle');
   }, []);
 
-  return { status, result, run, reset, meta: STATUS_META[status] || STATUS_META.idle };
+  return { status, result, liveHtml, run, reset, meta: STATUS_META[status] || STATUS_META.idle };
 }

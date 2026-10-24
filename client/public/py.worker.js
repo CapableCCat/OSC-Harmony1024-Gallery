@@ -9,8 +9,15 @@
  *   主 → Worker  { id, type: 'init' }
  *   主 → Worker  { id, type: 'run', code }
  *   Worker → 主  { id, type: 'ready' }                 运行时就绪
+ *   Worker → 主  { id, type: 'chunk', text }           运行中增量输出（仅"动画型"程序）
  *   Worker → 主  { id, type: 'result', ok, stdout, stderr }
  *   Worker → 主  { id, type: 'error', message }        加载失败等致命错误
+ *
+ * 增量输出（chunk）为什么存在：
+ *   终端动画用 \033[H 逐帧重绘，如果只把最终 stdout 一次性交回去，
+ *   前端只能看到最后一帧。动画型程序在跑的同时把每一批文本送出去，
+ *   主线程就能边跑边刷新画面，和真终端一致。
+ *   非动画型程序（普通 print）一律不流式，保持原有行为不变。
  */
 
 const PYODIDE_VERSION = '0.28.3';
@@ -19,12 +26,61 @@ const CDN_BASE = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
 /** 自托管目录：与 worker 同级（/pyodide/） */
 const LOCAL_BASE = new URL('pyodide/', self.location.href).href;
 
+/** 判定"动画型"的窗口：只看开头这么多字符，避免误判/无限扫描 */
+const PROBE_LIMIT = 4096;
+/** 光标定位/清屏/擦除指令 —— 出现即认为画面会被重绘 */
+const ANIM_RE = /\x1b\[[0-9;?]*[HJKABCEFGf]/;
+/** 实时流式累计上限：超过就停止增量（仍需跑完拿全量结果），防止疯狂 print 打满主线程 */
+const LIVE_LIMIT = 1024 * 1024;
+
 let pyodide = null;
 let initPromise = null;
 let buf = { out: '', err: '' };
 
+/** 当前这次运行的状态（用于把输出挂到正确的 id 上） */
+let runId = null;
+let live = { enabled: false, decided: false, sent: 0 };
+let probe = '';
+
 function resetBuf() {
   buf = { out: '', err: '' };
+  runId = null;
+  live = { enabled: false, decided: false, sent: 0 };
+  probe = '';
+}
+
+/** 收一批 stdout：永远累积全量，动画型额外实时送出去 */
+function emitOut(text) {
+  buf.out += text;
+
+  if (live.enabled) {
+    if (live.sent + text.length > LIVE_LIMIT) {
+      live.enabled = false; // 体积超限：放弃实时，结束时会拿到全量
+      probe = '';
+      return;
+    }
+    live.sent += text.length;
+    self.postMessage({ id: runId, type: 'chunk', text });
+    return;
+  }
+
+  if (live.decided) return;
+
+  // 还在判定窗口内
+  probe += text;
+  if (ANIM_RE.test(probe)) {
+    live.enabled = true;
+    live.decided = true;
+    live.sent = buf.out.length;
+    // 把已经攒下的内容整段补发，前面几行不会丢
+    self.postMessage({ id: runId, type: 'chunk', text: buf.out });
+    probe = '';
+    return;
+  }
+  if (probe.length > PROBE_LIMIT) {
+    live.decided = true; // 判定结束：普通输出，不流式
+    probe = '';
+  }
 }
 
 async function loadFrom(base) {
@@ -43,10 +99,9 @@ async function init() {
       pyodide = await loadFrom(CDN_BASE);
     }
 
+    // batched 回调按行触发：同学代码里的 flush() 与换行都会把这一帧送出来
     pyodide.setStdout({
-      batched: (text) => {
-        buf.out += text + '\n';
-      },
+      batched: (text) => emitOut(text + '\n'),
     });
     pyodide.setStderr({
       batched: (text) => {
@@ -85,6 +140,7 @@ self.onmessage = async (event) => {
     }
 
     resetBuf();
+    runId = id;
     let ok = true;
     let message = '';
 
@@ -103,5 +159,6 @@ self.onmessage = async (event) => {
       stdout: buf.out,
       stderr: ok ? buf.err : [buf.err, message].filter(Boolean).join('\n'),
     });
+    runId = null;
   }
 };

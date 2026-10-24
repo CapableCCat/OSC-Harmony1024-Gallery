@@ -28,10 +28,14 @@ async function copyText(text) {
   }
 }
 
+/* 操作栏主按钮统一样式：同款绿色圆角（重跑 / 查看源码 / 运行 共用） */
+const ACCENT_BTN =
+  'shrink-0 whitespace-nowrap rounded-[5px] bg-accent px-2.5 py-1 text-[11px] font-medium text-accent-ink shadow-[0_0_14px_-4px_var(--app-accent)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none';
+
 function WorkCard({ work, order = 0, intro = false }) {
   const meta = langMeta(work.language);
   const isFrame = work.runner === 'iframe';
-  const { status, result, run } = useRunner(work);
+  const { status, result, liveHtml, run } = useRunner(work);
 
   const [view, setView] = useState('code');
   const [expanded, setExpanded] = useState(false);
@@ -39,9 +43,10 @@ function WorkCard({ work, order = 0, intro = false }) {
 
   const busy = status === 'waking' || status === 'running';
 
+  /* 有实时画面就立刻切到输出视图，否则动画会在遮罩后面播完 */
   useEffect(() => {
-    if (result) setView('output');
-  }, [result]);
+    if (result || liveHtml) setView('output');
+  }, [result, liveHtml]);
 
   async function onCopy() {
     const ok = await copyText(work.code || '');
@@ -56,13 +61,13 @@ function WorkCard({ work, order = 0, intro = false }) {
     else run();
   };
 
-  const primaryLabel = busy
-    ? '运行中'
-    : result
-      ? view === 'output'
-        ? '查看源码'
-        : '查看输出'
-      : '运行';
+  /* 重跑：真正再执行一次（动画型作品因此可以再看一遍点亮过程） */
+  const onRerun = () => {
+    setView('output');
+    run();
+  };
+
+  const primaryLabel = result ? (view === 'output' ? '查看源码' : '查看输出') : busy ? '运行中' : '运行';
 
   return (
     <article
@@ -105,10 +110,11 @@ function WorkCard({ work, order = 0, intro = false }) {
         ) : view === 'code' ? (
           <CodeView code={work.code} language={work.language} expanded={expanded} onExpand={() => setExpanded(true)} />
         ) : (
-          <OutputPane result={result} status={status} />
+          <OutputPane result={result} status={status} liveHtml={liveHtml} />
         )}
 
-        {busy && (
+        {/* 遮罩只挡"还没出画面"的阶段；一旦有实时输出就撤掉，让动画直接可见 */}
+        {busy && !liveHtml && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2.5 bg-surface-2/95 px-6 text-center">
             <span className="size-5 animate-spin rounded-full border-2 border-line border-t-accent" />
             <p className="text-[12px] text-ink">
@@ -123,7 +129,7 @@ function WorkCard({ work, order = 0, intro = false }) {
         )}
       </div>
 
-      {/* 唯一操作栏：右侧主按钮承担「运行」与「源码态/展示态切换」两种职责 */}
+      {/* 唯一操作栏：右侧是「重跑」+「运行 / 查看源码」两个绿色按钮 */}
       <div className="flex h-11 items-center gap-4 border-t border-line px-4 mono text-[11px]">
         <span className="truncate text-faint">{meta.hint}</span>
 
@@ -147,14 +153,23 @@ function WorkCard({ work, order = 0, intro = false }) {
           </button>
 
           {!isFrame && (
-            <button
-              type="button"
-              onClick={onPrimary}
-              disabled={busy}
-              className="shrink-0 whitespace-nowrap rounded-[5px] bg-accent px-2.5 py-1 text-[11px] font-medium text-accent-ink shadow-[0_0_14px_-4px_var(--app-accent)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-            >
-              {primaryLabel}
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {/* 跑过一次才出现：真正的再执行，动画作品可以再看一遍过程 */}
+              {result && (
+                <button
+                  type="button"
+                  onClick={onRerun}
+                  disabled={busy}
+                  title="重新执行这段代码"
+                  className={ACCENT_BTN}
+                >
+                  重跑
+                </button>
+              )}
+              <button type="button" onClick={onPrimary} disabled={busy} className={ACCENT_BTN}>
+                {primaryLabel}
+              </button>
+            </div>
           )}
         </div>
       </div>

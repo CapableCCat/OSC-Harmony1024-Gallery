@@ -4,8 +4,10 @@
  * 同学们的作品经常用 \033[H（光标归位）、\033[2J（清屏）逐帧重绘动画，
  * 真终端里这是"覆盖刷新"，而朴素的 ansi-to-html 会把所有帧堆叠成一坨。
  *
- * 本模块在内存里维护一张字符网格，逐个解释转义序列，最后只渲染
- * 终态画面——等价于终端停止刷新后的那一帧。
+ * 本模块在内存里维护一张字符网格，逐个解释转义序列：
+ * - 一次性用法（ansiToHtml）：只渲染终态画面，等价于终端停止刷新后的那一帧；
+ * - 增量用法（createScreen().write(chunk)）：边跑边喂，随时取当前画面，
+ *   于是逐帧动画可以在网页里"一个一个显现"。
  *
  * 支持：LF / CR / TAB、CUP(H,f)、CUU/CUD/CUF/CUB(A~D)、ED(J)、EL(K)、
  *       SGR（0 复位、30-37/90-97 前景、40-47/100-107 背景、38;5 与 38;2 真彩色、1 粗体、3 斜体、39/49 默认）
@@ -15,10 +17,26 @@
 const MAX_ROWS = 2000;
 const MAX_COLS = 1000;
 
-/** 把 ANSI 文本解释成屏幕网格：rows[r][c] = { ch, s }，s 为样式表下标 */
-export function ansiToGrid(raw) {
+/**
+ * 创建一张可增量写入的屏幕。
+ * @returns {{
+ *   write: (chunk: string) => void,
+ *   grid: () => { rows: Map<number, {ch:string,s:number}>[], styles: string[] },
+ *   toHtml: () => string,
+ *   reset: () => void,
+ * }}
+ */
+export function createScreen() {
   const styles = [''];
   const styleIndex = new Map([['', 0]]);
+
+  // 光栅：rows[r] 为 Map<col, {ch, s}>，天然稀疏、按需扩行
+  let rows = [];
+  let row = 0;
+  let col = 0;
+  let cur = ''; // 当前 SGR 样式串，如 "color:#39d353;font-weight:700"
+  let stash = ''; // 上一块末尾没写完的转义序列，下次 write 前拼回去
+
   const styleOf = (style) => {
     let i = styleIndex.get(style);
     if (i === undefined) {
@@ -29,16 +47,11 @@ export function ansiToGrid(raw) {
     return i;
   };
 
-  // 光栅：rows[r] 为 Map<col, {ch, s}>，天然稀疏、按需扩行
-  const rows = [];
-  let row = 0;
-  let col = 0;
-  let cur = ''; // 当前 SGR 样式串，如 "color:#39d353;font-weight:700"
-
   const ensureRow = (r) => {
     if (!rows[r]) rows[r] = new Map();
     return rows[r];
   };
+
   const clearRow = (r) => {
     if (rows[r]) rows[r] = new Map();
   };
@@ -97,154 +110,187 @@ export function ansiToGrid(raw) {
     }
   };
 
-  const text = String(raw ?? '');
-  const len = text.length;
-  let i = 0;
+  function write(chunk) {
+    const text = stash + String(chunk ?? '');
+    stash = '';
+    const len = text.length;
+    let i = 0;
 
-  while (i < len) {
-    const ch = text[i];
+    while (i < len) {
+      const ch = text[i];
 
-    // ANSI 转义
-    if (ch === '\x1b') {
-      const next = text[i + 1];
+      // ANSI 转义
+      if (ch === '\x1b') {
+        const next = text[i + 1];
 
-      // OSC：跳到 BEL 或 ST
-      if (next === ']') {
-        i += 2;
-        while (i < len && text[i] !== '\x07' && !(text[i] === '\x1b' && text[i + 1] === '\\')) i++;
-        if (text[i] === '\x1b') i++;
+        // 分块切断：单独的 ESC 留到下一块
+        if (next === undefined) {
+          stash = text.slice(i);
+          return;
+        }
+
+        // OSC：跳到 BEL 或 ST
+        if (next === ']') {
+          let j = i + 2;
+          while (j < len && text[j] !== '\x07' && !(text[j] === '\x1b' && text[j + 1] === '\\')) j++;
+          if (j >= len) {
+            stash = text.slice(i); // 序列没结束，等下一块
+            return;
+          }
+          i = text[j] === '\x1b' ? j + 2 : j + 1;
+          continue;
+        }
+
+        if (next !== '[') {
+          i += 2; // 其他双字符转义，忽略
+          continue;
+        }
+
+        // CSI：读取参数直到终结字母
+        let j = i + 2;
+        while (j < len && !/[A-Za-z]/.test(text[j])) j++;
+        if (j >= len) {
+          stash = text.slice(i); // 序列没结束，等下一块
+          return;
+        }
+        const body = text.slice(i + 2, j);
+        const final = text[j];
+        i = j + 1;
+
+        const isPrivate = body.startsWith('?');
+        const params = body
+          .replace(/^\?/, '')
+          .split(';')
+          .filter((s) => s !== '')
+          .map((s) => {
+            const n = parseInt(s, 10);
+            return Number.isFinite(n) ? n : 0;
+          });
+        const p0 = params.length ? params[0] : 0;
+
+        switch (final) {
+          case 'H':
+          case 'f': {
+            row = Math.min(Math.max((params[0] || 1) - 1, 0), MAX_ROWS - 1);
+            col = Math.min(Math.max((params[1] || 1) - 1, 0), MAX_COLS - 1);
+            ensureRow(row);
+            break;
+          }
+          case 'A':
+            row = Math.max(row - Math.max(p0, 1), 0);
+            break;
+          case 'B':
+            row = Math.min(row + Math.max(p0, 1), MAX_ROWS - 1);
+            ensureRow(row);
+            break;
+          case 'C':
+            col = Math.min(col + Math.max(p0, 1), MAX_COLS - 1);
+            break;
+          case 'D':
+            col = Math.max(col - Math.max(p0, 1), 0);
+            break;
+          case 'E':
+            row = Math.min(row + Math.max(p0, 1), MAX_ROWS - 1);
+            col = 0;
+            ensureRow(row);
+            break;
+          case 'F':
+            row = Math.max(row - Math.max(p0, 1), 0);
+            col = 0;
+            break;
+          case 'G':
+            col = Math.min(Math.max(p0 - 1, 0), MAX_COLS - 1);
+            break;
+          case 'J': {
+            if (p0 === 2 || isPrivate) {
+              rows = [];
+              row = 0;
+              col = 0;
+            } else if (p0 === 0) {
+              const r0 = ensureRow(row);
+              for (let c = col; c < MAX_COLS; c++) r0.delete(c);
+              for (let r = row + 1; r < rows.length; r++) clearRow(r);
+            } else if (p0 === 1) {
+              const r0 = ensureRow(row);
+              for (let c = 0; c <= col; c++) r0.delete(c);
+            }
+            break;
+          }
+          case 'K': {
+            const r0 = ensureRow(row);
+            if (p0 === 0 || params.length === 0) {
+              for (let c = col; c < MAX_COLS; c++) r0.delete(c);
+            } else if (p0 === 1) {
+              for (let c = 0; c <= col; c++) r0.delete(c);
+            } else {
+              clearRow(row);
+            }
+            break;
+          }
+          case 'm':
+            applySgr(params);
+            break;
+          default:
+            break; // s/q/h/l/L/M/P/S/T 等忽略
+        }
+        continue;
+      }
+
+      // 控制字符
+      if (ch === '\n') {
+        row = Math.min(row + 1, MAX_ROWS - 1);
+        col = 0;
+        ensureRow(row);
         i++;
         continue;
       }
-
-      if (next !== '[') {
-        i += 2; // 其他双字符转义，忽略
+      if (ch === '\r') {
+        col = 0;
+        i++;
+        continue;
+      }
+      if (ch === '\t') {
+        col = Math.min((Math.floor(col / 8) + 1) * 8, MAX_COLS - 1);
+        i++;
+        continue;
+      }
+      if (ch === '\b') {
+        col = Math.max(col - 1, 0);
+        i++;
+        continue;
+      }
+      if (ch < ' ') {
+        i++; // 其余控制字符忽略
         continue;
       }
 
-      // CSI：读取参数直到终结字母
-      let j = i + 2;
-      while (j < len && !/[A-Za-z]/.test(text[j])) j++;
-      if (j >= len) break;
-      const body = text.slice(i + 2, j);
-      const final = text[j];
-      i = j + 1;
-
-      const isPrivate = body.startsWith('?');
-      const params = body
-        .replace(/^\?/, '')
-        .split(';')
-        .filter((s) => s !== '')
-        .map((s) => {
-          const n = parseInt(s, 10);
-          return Number.isFinite(n) ? n : 0;
-        });
-      const p0 = params.length ? params[0] : 0;
-
-      switch (final) {
-        case 'H':
-        case 'f': {
-          row = Math.min(Math.max((params[0] || 1) - 1, 0), MAX_ROWS - 1);
-          col = Math.min(Math.max((params[1] || 1) - 1, 0), MAX_COLS - 1);
-          ensureRow(row);
-          break;
-        }
-        case 'A':
-          row = Math.max(row - Math.max(p0, 1), 0);
-          break;
-        case 'B':
-          row = Math.min(row + Math.max(p0, 1), MAX_ROWS - 1);
-          ensureRow(row);
-          break;
-        case 'C':
-          col = Math.min(col + Math.max(p0, 1), MAX_COLS - 1);
-          break;
-        case 'D':
-          col = Math.max(col - Math.max(p0, 1), 0);
-          break;
-        case 'E':
-          row = Math.min(row + Math.max(p0, 1), MAX_ROWS - 1);
-          col = 0;
-          ensureRow(row);
-          break;
-        case 'F':
-          row = Math.max(row - Math.max(p0, 1), 0);
-          col = 0;
-          break;
-        case 'G':
-          col = Math.min(Math.max(p0 - 1, 0), MAX_COLS - 1);
-          break;
-        case 'J': {
-          if (p0 === 2 || isPrivate) {
-            rows.length = 0;
-            row = 0;
-            col = 0;
-          } else if (p0 === 0) {
-            const r0 = ensureRow(row);
-            for (let c = col; c < MAX_COLS; c++) r0.delete(c);
-            for (let r = row + 1; r < rows.length; r++) clearRow(r);
-          } else if (p0 === 1) {
-            const r0 = ensureRow(row);
-            for (let c = 0; c <= col; c++) r0.delete(c);
-          }
-          break;
-        }
-        case 'K': {
-          const r0 = ensureRow(row);
-          if (p0 === 0 || params.length === 0) {
-            for (let c = col; c < MAX_COLS; c++) r0.delete(c);
-          } else if (p0 === 1) {
-            for (let c = 0; c <= col; c++) r0.delete(c);
-          } else {
-            clearRow(row);
-          }
-          break;
-        }
-        case 'm':
-          applySgr(params);
-          break;
-        default:
-          break; // s/q/h/l/L/M/P/S/T 等忽略
-      }
-      continue;
-    }
-
-    // 控制字符
-    if (ch === '\n') {
-      row = Math.min(row + 1, MAX_ROWS - 1);
-      col = 0;
-      ensureRow(row);
+      // 可打印字符
+      const grid = ensureRow(row);
+      grid.set(col, { ch, s: styleOf(cur) });
+      col = Math.min(col + 1, MAX_COLS - 1);
       i++;
-      continue;
     }
-    if (ch === '\r') {
-      col = 0;
-      i++;
-      continue;
-    }
-    if (ch === '\t') {
-      col = Math.min((Math.floor(col / 8) + 1) * 8, MAX_COLS - 1);
-      i++;
-      continue;
-    }
-    if (ch === '\b') {
-      col = Math.max(col - 1, 0);
-      i++;
-      continue;
-    }
-    if (ch < ' ') {
-      i++; // 其余控制字符忽略
-      continue;
-    }
-
-    // 可打印字符
-    const grid = ensureRow(row);
-    grid.set(col, { ch, s: styleOf(cur) });
-    col = Math.min(col + 1, MAX_COLS - 1);
-    i++;
   }
 
-  return { rows, styles };
+  return {
+    write,
+    grid: () => ({ rows, styles }),
+    toHtml: () => gridToHtml({ rows, styles }),
+    reset: () => {
+      rows = [];
+      row = 0;
+      col = 0;
+      cur = '';
+      stash = '';
+    },
+  };
+}
+
+/** 兼容用法：一次性把整段 ANSI 文本解释成屏幕网格 */
+export function ansiToGrid(raw) {
+  const screen = createScreen();
+  screen.write(raw);
+  return screen.grid();
 }
 
 /** 把网格渲染成 HTML：按行分组同样式 span，行内空格用真实空格（配合 pre 展示） */
@@ -292,7 +338,9 @@ export function gridToHtml(grid) {
 
 /** 总入口：ANSI 文本 → 最终画面 HTML */
 export function ansiToHtml(raw) {
-  return gridToHtml(ansiToGrid(raw));
+  const screen = createScreen();
+  screen.write(raw);
+  return screen.toHtml();
 }
 
 /** 是否包含"需要模拟器"的光标/清屏/擦除指令 */

@@ -15,7 +15,7 @@
 | 语言 | 执行器 | 做法 | 为什么 |
 | --- | --- | --- | --- |
 | HTML / JS | `iframe` | `sandbox="allow-scripts"` + srcdoc 注入 CSP | 零延迟、不需要执行后端；沙箱拿不到父页面与 cookie |
-| Python | `pyodide` | 浏览器里的 CPython（WASM），跑在 **Web Worker** | 真执行，且死循环可以被 `terminate()` 强制回收 |
+| Python | `pyodide` | 浏览器里的 CPython（WASM），跑在 **Web Worker** | 真执行，且死循环可以被 `terminate()` 强制回收；输出边跑边送到页面，终端逐帧动画能真的动起来 |
 | C / C++ | `cached` | 构建阶段用 gcc/g++ 编译执行，输出存进 JSON | 浏览器没有 C 编译器；作品是静态的，输出可预先生成 |
 
 > 早期方案是「Node 代理 + Piston 容器」，因 Render 免费版无法运行 `--privileged` / cgroup v2 的 Piston 而放弃，改为零后端。

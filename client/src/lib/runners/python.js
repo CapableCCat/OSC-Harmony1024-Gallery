@@ -29,6 +29,12 @@ function ensureWorker() {
     const slot = pending.get(msg.id);
     if (!slot) return;
 
+    // 运行中的增量输出：只转发，不结束这次请求
+    if (msg.type === 'chunk') {
+      slot.onChunk?.(msg.text || '');
+      return;
+    }
+
     if (msg.type === 'error') {
       pending.delete(msg.id);
       slot.reject(Object.assign(new Error(msg.message || 'Worker 错误'), { code: 'WORKER' }));
@@ -48,7 +54,7 @@ function ensureWorker() {
   return worker;
 }
 
-function request(payload, timeoutMs) {
+function request(payload, timeoutMs, onChunk) {
   const w = ensureWorker();
   const id = ++seq;
 
@@ -59,6 +65,7 @@ function request(payload, timeoutMs) {
     }, timeoutMs);
 
     pending.set(id, {
+      onChunk,
       resolve(value) {
         clearTimeout(timer);
         resolve(value);
@@ -108,15 +115,19 @@ async function ensureRuntime(onStatus) {
 }
 
 /**
+ * @param {string} code
+ * @param {{ timeoutMs?: number, onStatus?: (s:'waking'|'running') => void,
+ *           onChunk?: (text:string) => void }} [options]
+ *   onChunk 只在"动画型"程序（含光标重绘指令）运行中触发，用于逐帧实时渲染
  * @returns {Promise<{ok:boolean, timeout:boolean, stdout:string, stderr:string}>}
  */
-export function runPython(code, { timeoutMs = RUN_TIMEOUT_MS, onStatus } = {}) {
+export function runPython(code, { timeoutMs = RUN_TIMEOUT_MS, onStatus, onChunk } = {}) {
   const task = async () => {
     await ensureRuntime(onStatus);
     onStatus?.('running');
 
     try {
-      const res = await request({ type: 'run', code }, timeoutMs);
+      const res = await request({ type: 'run', code }, timeoutMs, onChunk);
       return { ok: Boolean(res.ok), timeout: false, stdout: res.stdout || '', stderr: res.stderr || '' };
     } catch (err) {
       if (err?.code === 'TIMEOUT') {

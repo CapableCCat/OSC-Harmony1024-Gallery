@@ -14,19 +14,23 @@ const converter = new Convert({
 /**
  * 输出渲染分两条路径：
  * - 含光标/清屏/擦除指令（\033[H、\033[2J、\033[K…）→ 屏幕模拟器：
- *   在内存网格里逐帧覆盖，只渲染终态画面（动画类作品的正确形态）
+ *   在内存网格里逐帧覆盖；运行中由 liveHtml 提供当前画面（动画可见），
+ *   结束后用最终 stdout 重算一遍终态
  * - 普通输出 → ansi-to-html（支持 SGR 含 24bit 真彩色）
  */
-export default function OutputPane({ result, status }) {
+export default function OutputPane({ result, status, liveHtml }) {
   const { stdout, stderr } = result || {};
   const [expanded, setExpanded] = useState(false);
 
-  const stdoutHtml = useMemo(() => {
+  const finalHtml = useMemo(() => {
     if (!stdout) return '';
     return needsScreenEmulation(stdout)
       ? ansiToHtml(stdout)
       : converter.toHtml(stdout);
   }, [stdout]);
+
+  /* 运行中的实时画面优先；没在运行就用最终结果 */
+  const stdoutHtml = liveHtml || finalHtml;
 
   const stderrHtml = useMemo(() => {
     if (!stderr) return '';
@@ -35,7 +39,7 @@ export default function OutputPane({ result, status }) {
       : converter.toHtml(stderr);
   }, [stderr]);
 
-  const empty = !stdout && !stderr;
+  const empty = !stdoutHtml && !stderrHtml;
 
   // ESC 关闭放大层
   useEffect(() => {
