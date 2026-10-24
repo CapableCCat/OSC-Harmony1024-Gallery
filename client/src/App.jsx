@@ -115,8 +115,16 @@ export default function App() {
             </span>
           </div>
           <p className="mt-2">
-            © 2026 天津中德开源鸿蒙社 · 本站由社团维护者与 GLM、DeepSeek 协作构建 ·
-            祝所有程序员 1024 节日快乐
+            © 2026 天津中德开源鸿蒙社 · 本站由{' '}
+            <a
+              href="https://github.com/CapableCCat"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-muted underline decoration-line underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
+            >
+              CapableCCat
+            </a>{' '}
+            与 GLM、DeepSeek 协作构建 · 祝所有程序员 1024 节日快乐
           </p>
         </footer>
       </main>

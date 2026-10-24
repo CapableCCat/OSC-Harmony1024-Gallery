@@ -112,7 +112,7 @@ html {
 
 body {
   background-color: var(--app-bg);
-  /* 移动端保险：杜绝任何意外元素造成的横向微滑动（clip 不产生滚动容器，不影响 sticky） */
+  /* 移动端保险：杜绝意外元素造成的横向微滑动（clip 不产生滚动容器，不影响 sticky） */
   overflow-x: clip;
   /* 极淡胶片颗粒：作为背景层，只在卡片缝隙中可见，不糊文字 */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
