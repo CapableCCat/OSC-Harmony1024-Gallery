@@ -57,11 +57,5 @@ export function createLiveOutput(onUpdate) {
       raf = 0;
       dirty = false;
     },
-    /** 清空重来 */
-    reset() {
-      this.cancel();
-      text = '';
-      screen = createScreen();
-    },
   };
 }

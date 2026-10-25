@@ -23,7 +23,6 @@ const MAX_COLS = 1000;
  *   write: (chunk: string) => void,
  *   grid: () => { rows: Map<number, {ch:string,s:number}>[], styles: string[] },
  *   toHtml: () => string,
- *   reset: () => void,
  * }}
  */
 export function createScreen() {
@@ -276,21 +275,7 @@ export function createScreen() {
     write,
     grid: () => ({ rows, styles }),
     toHtml: () => gridToHtml({ rows, styles }),
-    reset: () => {
-      rows = [];
-      row = 0;
-      col = 0;
-      cur = '';
-      stash = '';
-    },
   };
-}
-
-/** 兼容用法：一次性把整段 ANSI 文本解释成屏幕网格 */
-export function ansiToGrid(raw) {
-  const screen = createScreen();
-  screen.write(raw);
-  return screen.grid();
 }
 
 /** 把网格渲染成 HTML：按行分组同样式 span，行内空格用真实空格（配合 pre 展示） */

@@ -59,8 +59,6 @@ export const LANGUAGES = {
   },
 };
 
-export const LANG_ORDER = ['html', 'js', 'python', 'c', 'cpp', 'other'];
-
 export function langMeta(id) {
   return LANGUAGES[id] || LANGUAGES.other;
 }
