@@ -35,6 +35,14 @@ function ensureWorker() {
       return;
     }
 
+    // 解释器致命错误：立即结束，不等超时（Worker 已经不可信，直接丢掉）
+    if (msg.type === 'fatal') {
+      pending.delete(msg.id);
+      hardReset();
+      slot.reject(Object.assign(new Error(msg.message || 'Python 运行时崩溃'), { code: 'FATAL' }));
+      return;
+    }
+
     if (msg.type === 'error') {
       pending.delete(msg.id);
       slot.reject(Object.assign(new Error(msg.message || 'Worker 错误'), { code: 'WORKER' }));
@@ -128,8 +136,23 @@ export function runPython(code, { timeoutMs = RUN_TIMEOUT_MS, onStatus, onChunk 
 
     try {
       const res = await request({ type: 'run', code }, timeoutMs, onChunk);
+
+      // 解释器崩溃（如 "Fatal Python error" / "SuspendError"）后 Worker 往往已经不可用，
+      // 直接丢掉它，下一次运行会重建——否则这张卡会永久卡在报错上，连重试都没用。
+      if (!res.ok && /Fatal Python error|Pyodide has suffered a fatal error|SuspendError/i.test(res.stderr || '')) {
+        hardReset();
+      }
+
       return { ok: Boolean(res.ok), timeout: false, stdout: res.stdout || '', stderr: res.stderr || '' };
     } catch (err) {
+      if (err?.code === 'FATAL') {
+        return {
+          ok: false,
+          timeout: false,
+          stdout: '',
+          stderr: `Python 运行时崩溃：${err.message}\n已重置运行环境，可以直接重跑。`,
+        };
+      }
       if (err?.code === 'TIMEOUT') {
         hardReset(); // 死循环没法打断，只能整只 Worker 扔掉
         return {
@@ -152,8 +175,4 @@ export function runPython(code, { timeoutMs = RUN_TIMEOUT_MS, onStatus, onChunk 
 export function warmupPython() {
   if (ready || loading) return;
   ensureRuntime().catch(() => {});
-}
-
-export function isPythonReady() {
-  return ready;
 }

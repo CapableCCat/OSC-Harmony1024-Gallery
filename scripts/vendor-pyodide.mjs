@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const VERSION = '0.28.3';
+const VERSION = '0.27.7';
 const CDN = `https://cdn.jsdelivr.net/pyodide/v${VERSION}/full/`;
 const OUT_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

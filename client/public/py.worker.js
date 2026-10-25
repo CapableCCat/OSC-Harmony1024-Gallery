@@ -20,7 +20,7 @@
  *   非动画型程序（普通 print）一律不流式，保持原有行为不变。
  */
 
-const PYODIDE_VERSION = '0.28.3';
+const PYODIDE_VERSION = '0.27.7';
 const CDN_BASE = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
 
 /** 自托管目录：与 worker 同级（/pyodide/） */
@@ -106,8 +106,22 @@ async function init() {
     pyodide.setStderr({
       batched: (text) => {
         buf.err += text + '\n';
+
+        // 解释器崩溃时 runPythonAsync 永远不会 settle，只会干等到超时。
+        // 这里第一时间上报，让前端能显示真实原因并立刻重置运行时。
+        if (/Fatal Python error|Pyodide has suffered a fatal error|SuspendError/i.test(text)) {
+          self.postMessage({ id: runId, type: 'fatal', message: text.trim() });
+        }
       },
     });
+
+    // 预热：把首次 import 的开销挪出用户的计时窗口。
+    // 同学的动画作品普遍会 import os/sys/time/random，其中 random 最重。
+    try {
+      await pyodide.runPythonAsync('import os, sys, time, random');
+    } catch {
+      /* 预热失败不影响正常运行 */
+    }
 
     return pyodide;
   })();
