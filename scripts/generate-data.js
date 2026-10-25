@@ -138,6 +138,30 @@ function truncate(text, max = MAX_OUTPUT_CHARS) {
   return `${text.slice(0, max)}\n…（输出过长，已截断）`;
 }
 
+/**
+ * 读文本：优先严格 UTF-8，失败则回退 GBK。
+ * 同学在 Windows 用记事本 / 旧 IDE 保存的中文源码常是 GBK，
+ * 直接按 utf8 读会变乱码；更麻烦的是 HTML 里的资源引用会解不出来，
+ * 内联漏掉后沙箱里 404，作品直接白屏。
+ */
+const utf8Strict = new TextDecoder('utf-8', { fatal: true });
+
+function decodeText(buf) {
+  try {
+    return cleanText(utf8Strict.decode(buf));
+  } catch {
+    try {
+      return cleanText(new TextDecoder('gbk').decode(buf));
+    } catch {
+      return cleanText(buf.toString('utf8')); // 兜底：宁可乱码也不中断构建
+    }
+  }
+}
+
+function readText(file) {
+  return decodeText(fs.readFileSync(file));
+}
+
 function sha1(text) {
   return crypto.createHash('sha1').update(text).digest('hex');
 }
@@ -219,7 +243,7 @@ function inlineCssUrls(css, baseDir, budget) {
 function inlineHtml(htmlPath) {
   const dir = path.dirname(htmlPath);
   const budget = { total: 0 };
-  let html = cleanText(fs.readFileSync(htmlPath, 'utf8'));
+  let html = readText(htmlPath);
 
   // <link rel="stylesheet" href="...">
   html = html.replace(/<link\b[^>]*>/gi, (tag) => {
@@ -228,7 +252,7 @@ function inlineHtml(htmlPath) {
     if (!m) return tag;
     const asset = readAsset(dir, m[1], budget);
     if (!asset) return tag;
-    const css = inlineCssUrls(cleanText(asset.buf.toString('utf8')), path.dirname(asset.abs), budget);
+    const css = inlineCssUrls(decodeText(asset.buf), path.dirname(asset.abs), budget);
     return `<style>\n${css}\n</style>`;
   });
 
@@ -239,7 +263,7 @@ function inlineHtml(htmlPath) {
     const asset = readAsset(dir, m[1], budget);
     if (!asset) return whole;
     const rest = attrs.replace(/\s*src\s*=\s*["'][^"']*["']/i, '').replace(/\/\s*$/, '');
-    const code = cleanText(asset.buf.toString('utf8')).replace(/<\/script/gi, '<\\/script');
+    const code = decodeText(asset.buf).replace(/<\/script/gi, '<\\/script');
     return `<script${rest}>\n${code}\n</script>`;
   });
 
@@ -357,7 +381,7 @@ function readTitle(dir) {
   for (const name of ['README.md', 'readme.md', 'Readme.md']) {
     const full = path.join(dir, name);
     if (!fs.existsSync(full)) continue;
-    const text = cleanText(fs.readFileSync(full, 'utf8')).slice(0, 4000);
+    const text = readText(full).slice(0, 4000);
     const match = text.match(/^\s*#\s+(.+)$/m);
     if (match) return match[1].trim().slice(0, 60);
   }
@@ -376,7 +400,7 @@ function collectReferencedFiles(files) {
 
     let text = '';
     try {
-      text = fs.readFileSync(file, 'utf8');
+      text = readText(file);
     } catch {
       continue;
     }
@@ -516,7 +540,7 @@ async function extractFromRepo(repoDir, repoUrl, concurrency) {
       const { code: inlined } = inlineHtml(entry.file);
       code = inlined;
     } else {
-      code = cleanText(fs.readFileSync(entry.file, 'utf8'));
+      code = readText(entry.file);
     }
 
     const work = normalize(
