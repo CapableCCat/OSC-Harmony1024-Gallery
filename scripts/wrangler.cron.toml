@@ -1,0 +1,19 @@
+# 可用 wrangler 直接部署：
+#   npx wrangler deploy --config scripts/wrangler.cron.toml
+#   npx wrangler secret put GH_TOKEN --config scripts/wrangler.cron.toml
+#
+# 也可以完全不用这个文件，改在 Cloudflare 后台粘贴代码并配置变量，
+# 步骤见 docs/代码画廊 · 定时同步配置（一次性）.md
+
+name = "osc-gallery-sync"
+main = "cloudflare-cron-worker.js"
+compatibility_date = "2025-01-01"
+
+# 每 5 分钟触发一次；Workers 免费版支持到 1 分钟粒度
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+GH_REPO = "CapableCCat/OSC-Harmony1024-Gallery"
+GH_WORKFLOW = "deploy.yml"
+GH_REF = "main"

@@ -3,13 +3,23 @@ name: Build & Deploy
 # 触发方式：
 #   - push 到 main：自动构建部署
 #   - 手动：Actions 页面点 "Run workflow"（活动截止后评委改完数据，一键重发）
-#   - 定时：活动期间每 30 分钟同步一次作品仓库
+#   - repository_dispatch：给外部同步器（Cloudflare Worker / webhook）调用的入口，
+#     参见 docs/代码画廊 · 定时同步配置（一次性）.md
+#   - 定时：每 30 分钟兜底一次作品仓库同步
+#     ⚠️ GitHub 的 schedule 是 best-effort：实测会被延迟到 2~5 小时一次，
+#        所以「及时上墙」要靠上面的 repository_dispatch / workflow_dispatch，不能只靠 cron。
+#     （一天最多 48 次 ≈ 1,440 次/月，超过 Cloudflare Pages 免费计划的
+#      500 builds/月；所以部署前有"产物指纹"守卫：线上与本地产物完全一致时
+#      跳过部署，只有数据或代码真的变了才消耗一次配额。活动结束后可把
+#      cron 调到每 2 小时甚至更低频）
 #     （作品在 AtomGit 合并不会触发本仓库的 CI，所以需要定时兜底；
 #       GitHub 会在仓库 60 天无活动后自动停用定时任务，届时手动 Run workflow 即可）
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  repository_dispatch:
+    types: [sync-works]
   schedule:
     - cron: '*/30 * * * *'
 
@@ -79,7 +89,31 @@ jobs:
       - name: 构建前端
         run: npm run build:site
 
+      # 守卫：线上产物与本地产物完全一致就跳过部署，保住 Pages 免费配额。
+      # 判断依据是"产物指纹"而不是时间：代码变了 index.html 里引用的 hash 会变，
+      # 数据变了 works.json 会变，任一变化都会照常部署；只有两者都没变才跳过。
+      # 拉取失败（站点不可达等）一律按"需要部署"处理，绝不让站点停在旧版本。
+      - name: 判断是否需要部署
+        id: diff
+        shell: bash
+        run: |
+          set +e
+          HOST="https://${PAGES_PROJECT}.pages.dev"
+          LIVE_INDEX=$(curl -fsS --max-time 20 "$HOST/?cb=${GITHUB_RUN_ID}" | sha256sum | cut -d' ' -f1)
+          LIVE_DATA=$(curl -fsS --max-time 20 "$HOST/data/works.json?cb=${GITHUB_RUN_ID}" | sha256sum | cut -d' ' -f1)
+          LOCAL_INDEX=$(sha256sum client/dist/index.html | cut -d' ' -f1)
+          LOCAL_DATA=$(sha256sum client/dist/data/works.json | cut -d' ' -f1)
+          echo "index 线上=${LIVE_INDEX:0:12} 本地=${LOCAL_INDEX:0:12}"
+          echo "data  线上=${LIVE_DATA:0:12} 本地=${LOCAL_DATA:0:12}"
+          if [ -n "$LIVE_INDEX" ] && [ "$LIVE_INDEX" = "$LOCAL_INDEX" ] && [ -n "$LIVE_DATA" ] && [ "$LIVE_DATA" = "$LOCAL_DATA" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::产物与线上完全一致，跳过部署（本次不消耗 Pages 构建配额）"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: 部署到 Cloudflare Pages
+        if: steps.diff.outputs.skip != 'true'
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
