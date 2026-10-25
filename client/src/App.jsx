@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import DistributionBar from './components/DistributionBar';
@@ -6,6 +6,7 @@ import WorkCard from './components/WorkCard';
 import { EmptyGallery, SkeletonGrid, StateMessage } from './components/StatusScreen';
 import { useWorks } from './hooks/useWorks';
 import { warmupPython } from './lib/runners/python';
+import { TOOLS_ALWAYS_VISIBLE } from './lib/ui-flags';
 
 export default function App() {
   const { works, generatedAt, loading, error } = useWorks();
@@ -13,6 +14,9 @@ export default function App() {
   const [query, setQuery] = useState('');
   /* 入场动画只在首次加载播放；筛选/搜索产生的新卡片不再重播 */
   const [intro, setIntro] = useState(true);
+  /* 放大的卡片：{ id, base: 原始下标, at: 渲染时插入的位置（所在行的行首） } */
+  const [expanded, setExpanded] = useState(null);
+  const gridRef = useRef(null);
   const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
@@ -58,6 +62,93 @@ export default function App() {
     });
   }, [works, lang, deferredQuery]);
 
+  /* 当前可见作品（渲染顺序的基准），供 toggleExpand 计算行首时读取，避免闭包过期 */
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+
+  /* 实测网格列数：grid-template-columns 解析后就是 "380px 380px 380px" 这种形式 */
+  const measureCols = useCallback(() => {
+    const grid = gridRef.current;
+    if (!grid) return 1;
+    const tracks = getComputedStyle(grid).gridTemplateColumns;
+    const n = tracks.split(/\s+/).filter(Boolean).length;
+    return Math.max(1, n || 1);
+  }, []);
+
+  /* 列数决定"放大"给哪个：1 列给全屏，多列给整行展开 */
+  const [cols, setCols] = useState(1);
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const read = () => {
+      const n = measureCols();
+      setCols((cur) => (cur === n ? cur : n));
+      if (n === 1) setExpanded(null); // 单列没有"整行"可言
+    };
+    read();
+
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(read);
+    ro.observe(grid);
+    return () => ro.disconnect();
+  }, [measureCols, shown.length]);
+
+  /* 工具图标的显示策略开关：?tools=always 可强制常显（详见 lib/ui-flags） */
+  useEffect(() => {
+    document.documentElement.dataset.tools = TOOLS_ALWAYS_VISIBLE ? 'always' : 'hover';
+  }, []);
+
+  /**
+   * 展开/收起。
+   * 跨整行的卡片放不进它原来那一行，所以把它的**渲染顺序**提到所在行行首：
+   * 它占满自己那一行，原本同行的卡片整行顺延——点了哪一行，就在哪一行放大。
+   * 代价：放大期间编号会短暂不连续（收起即恢复）；这是"位置对齐"换来的一致性。
+   */
+  const toggleExpand = useCallback(
+    (id) => {
+      setExpanded((cur) => {
+        if (cur && cur.id === id) return null;
+        const base = shownRef.current.findIndex((w) => w.id === id);
+        if (base < 0) return null;
+        const cols = measureCols();
+        return { id, base, at: Math.floor(base / cols) * cols };
+      });
+    },
+    [measureCols]
+  );
+
+  /* 窗口宽度变化会改变列数，行首位置要跟着重算，否则会留空洞 */
+  useEffect(() => {
+    if (!expanded) return;
+    const onResize = () => {
+      const cols = measureCols();
+      setExpanded((cur) => (cur ? { ...cur, at: Math.floor(cur.base / cols) * cols } : cur));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [expanded?.id, measureCols]);
+
+  /**
+   * 视觉顺序：把放大的那张排到所在行行首。
+   * 用 CSS `order` 而不是重排数组——重排数组会让 React 移动 DOM 节点，
+   * iframe 卡被移动就会重新加载（学生作品闪一下重跑），这是不能接受的。
+   */
+  const positionOf = useMemo(() => {
+    const map = new Map();
+    shown.forEach((w, i) => map.set(w.id, i));
+    if (!expanded) return map;
+
+    const base = shown.findIndex((w) => w.id === expanded.id);
+    if (base < 0) return map;
+
+    const seq = shown.map((w) => w.id);
+    seq.splice(base, 1);
+    seq.splice(Math.min(expanded.at, seq.length), 0, expanded.id);
+    seq.forEach((id, i) => map.set(id, i));
+    return map;
+  }, [shown, expanded]);
+
   const languageCount = useMemo(
     () => new Set(works.map((w) => w.language)).size,
     [works]
@@ -98,9 +189,23 @@ export default function App() {
         )}
 
         {shown.length > 0 && (
-          <div className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr))]">
+          /* 放大卡已被提到行首，不再需要 dense 补位（两套机制同时开会互相干扰） */
+          <div
+            ref={gridRef}
+            data-grid-dim={expanded ? 'true' : 'false'}
+            className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr))]"
+          >
             {shown.map((work) => (
-              <WorkCard key={work.id} work={work} order={orderOf.get(work.id) || 0} intro={intro} />
+              <WorkCard
+                key={work.id}
+                work={work}
+                order={orderOf.get(work.id) || 0}
+                orderIndex={positionOf.get(work.id) ?? 0}
+                intro={intro}
+                expanded={expanded?.id === work.id}
+                compact={cols <= 1}
+                onToggleExpand={toggleExpand}
+              />
             ))}
           </div>
         )}

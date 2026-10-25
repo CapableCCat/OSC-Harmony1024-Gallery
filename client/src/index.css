@@ -358,3 +358,74 @@ body::before {
   --code-meta: #953800;
 }
    ============================================================ */
+
+/* ------------------------------------------------------------
+ * 放大态的视觉分级
+ * 有卡片放大时，其余卡片轻微降权（含 iframe 的纯白纸面），
+ * 避免"谁亮谁主角"和尺寸信号打架；数值可按观感微调。
+ * ------------------------------------------------------------ */
+[data-grid-dim='true'] > article {
+  transition: opacity 180ms ease;
+}
+[data-grid-dim='true'] > article:not([data-expanded='true']) {
+  opacity: 0.5;
+}
+
+/* ------------------------------------------------------------
+ * 卡片预览区右上角的工具图标（复制 / 放大）
+ * 桌面：默认隐藏，悬停或键盘聚焦才出现，避免压住画面内容；
+ * 触屏（主输入不是精确指针）：没有 hover 可言，一直显示。
+ * ?tools=always 可强制常显，方便对比遮挡与可发现性。
+ * ------------------------------------------------------------ */
+.card-tools {
+  transition: opacity 150ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .card-tools {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .group:hover .card-tools,
+  .group:focus-within .card-tools,
+  .card-tools:focus-within {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+[data-tools='always'] .card-tools {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* ------------------------------------------------------------
+ * 工具图标的气泡提示
+ * 原生 title 的延迟由浏览器决定（约 1 秒且不可调），常被当成"没有提示"。
+ * 这里自绘，hover / 键盘聚焦立刻出现；右对齐，避免被卡片的 overflow 裁掉。
+ * ------------------------------------------------------------ */
+.tip {
+  position: relative;
+}
+.tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  padding: 2px 6px;
+  border: 1px solid var(--app-line);
+  border-radius: 4px;
+  background: var(--app-surface);
+  color: var(--app-ink);
+  font-size: 10.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  pointer-events: none;
+  z-index: 40;
+}
+.tip:hover::after,
+.tip:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
